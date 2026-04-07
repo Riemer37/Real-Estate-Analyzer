@@ -18,42 +18,42 @@ export default function Acquisition({ d, onUpdate }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       <div className="card">
-        <div className="card-title">Bid & Costs</div>
-        <label style={{ fontSize: 12, color: '#71717A' }}>Bid relative to asking ({bidPct > 0 ? '+' : ''}{bidPct}%)</label>
+        <div className="card-title">Bod & Kosten</div>
+        <label style={{ fontSize: 12, color: '#71717A' }}>Bod t.o.v. vraagprijs ({bidPct > 0 ? '+' : ''}{bidPct}%)</label>
         <input type="range" min={-12} max={5} step={0.5} value={bidPct} onChange={e => setBidPct(+e.target.value)} style={{ width: '100%', margin: '6px 0 12px' }} />
-        <label style={{ fontSize: 12, color: '#71717A' }}>Transfer tax ({taxPct.toFixed(1)}%)</label>
+        <label style={{ fontSize: 12, color: '#71717A' }}>Overdrachtsbelasting ({taxPct.toFixed(1)}%)</label>
         <input type="range" min={2} max={10.4} step={0.1} value={taxPct} onChange={e => setTaxPct(+e.target.value)} style={{ width: '100%', margin: '6px 0 12px' }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
           <div>
-            <label style={{ fontSize: 12, color: '#71717A' }}>Notary & legal (€)</label>
+            <label style={{ fontSize: 12, color: '#71717A' }}>Notaris & juridisch (€)</label>
             <input type="number" value={notary} step={100} onChange={e => setNotary(+e.target.value)} style={{ width: '100%', padding: '6px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13 }} />
           </div>
           <div>
-            <label style={{ fontSize: 12, color: '#71717A' }}>Inspection & misc. (€)</label>
+            <label style={{ fontSize: 12, color: '#71717A' }}>Keuring & overig (€)</label>
             <input type="number" value={misc} step={100} onChange={e => setMisc(+e.target.value)} style={{ width: '100%', padding: '6px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13 }} />
           </div>
         </div>
-        {[['Asking price', fmt(d.price)], ['Bid price', fmt(bid)], [`Transfer tax (${taxPct.toFixed(1)}%)`, fmt(tax)], ['Notary & legal', fmt(notary)], ['Inspection', fmt(misc)]].map(([k, v]) => (
+        {[['Vraagprijs', fmt(d.price)], ['Bod', fmt(bid)], [`Overdrachtsbelasting (${taxPct.toFixed(1)}%)`, fmt(tax)], ['Notaris & juridisch', fmt(notary)], ['Keuring', fmt(misc)]].map(([k, v]) => (
           <div className="row" key={k}><span className="rk">{k}</span><span className="rv">{v}</span></div>
         ))}
-        <div className="row"><span style={{ fontWeight: 600, color: '#1C1C1E' }}>Total acquisition</span><span style={{ fontWeight: 700, color: '#1D4ED8' }}>{fmt(totalAcq)}</span></div>
+        <div className="row"><span style={{ fontWeight: 600, color: '#1C1C1E' }}>Totale aankoop</span><span style={{ fontWeight: 700, color: '#1D4ED8' }}>{fmt(totalAcq)}</span></div>
         {diffFmv < 0
-          ? <div className="note note-g" style={{ marginTop: 10 }}>✓ {fmt(Math.abs(diffFmv))} below fair value — good entry point.</div>
-          : <div className="note note-y" style={{ marginTop: 10 }}>↑ {fmt(diffFmv)} above fair value — negotiate down.</div>
+          ? <div className="note note-g" style={{ marginTop: 10 }}>✓ {fmt(Math.abs(diffFmv))} onder marktwaarde — goed instapmoment.</div>
+          : <div className="note note-y" style={{ marginTop: 10 }}>↑ {fmt(diffFmv)} boven marktwaarde — onderhandel naar beneden.</div>
         }
       </div>
 
       <div>
         <div className="card">
-          <div className="card-title">Market Context</div>
-          {[['Fair market value', fmt(d.fair_value)], ['Asking price', fmt(d.price)], ['Price per m²', fmt(Math.floor(d.price / Math.max(d.sqm, 1))) + '/m²'], ['Energy label', d.energy], ['Condition', d.condition], ['Year built', String(d.year)]].map(([k, v]) => (
+          <div className="card-title">Marktcontext</div>
+          {[['Marktwaarde', fmt(d.fair_value)], ['Vraagprijs', fmt(d.price)], ['Prijs per m²', fmt(Math.floor(d.price / Math.max(d.sqm, 1))) + '/m²'], ['Energielabel', d.energy], ['Staat', d.condition], ['Bouwjaar', String(d.year)]].map(([k, v]) => (
             <div className="row" key={k}><span className="rk">{k}</span><span className="rv">{v}</span></div>
           ))}
         </div>
         <div className="card" style={{ marginTop: 0 }}>
-          <div className="card-title">Cost Summary</div>
+          <div className="card-title">Kostenoverzicht</div>
           <div style={{ fontSize: 28, fontWeight: 600, color: '#1D4ED8', letterSpacing: -1 }}>{fmt(totalAcq)}</div>
-          <div style={{ fontSize: 12, color: '#A1A1AA', marginTop: 4 }}>Total cost to acquire this property</div>
+          <div style={{ fontSize: 12, color: '#A1A1AA', marginTop: 4 }}>Totale aankoopkosten voor deze woning</div>
         </div>
       </div>
     </div>

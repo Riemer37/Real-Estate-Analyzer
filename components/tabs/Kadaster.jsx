@@ -13,17 +13,17 @@ export default function Kadaster({ d }) {
   return (
     <>
       <div className="card">
-        <div className="card-title">Official Kadaster BAG Data &nbsp; {bagLink}</div>
+        <div className="card-title">Officiële Kadaster BAG-gegevens &nbsp; {bagLink}</div>
         {kad.found ? (
           <>
             <div className="kad-grid">
               {[
-                ['Official address',    kad.official_address ?? '—',                             '',     'From PDOK Locatieserver'],
-                ['Registered area',     kad.official_sqm ? `${kad.official_sqm} m²` : '—',      '',     'From BAG verblijfsobject'],
-                ['Official build year', String(kad.official_year ?? '—'),                        '',     'From BAG pand register'],
-                ['Registered use',      kad.usage ?? '—',                                        '',     'Gebruiksdoel'],
-                ['BAG status',          kad.status ?? '—',                                       '',     'Current registration status'],
-                ['Split status',        kad.is_split ? `${kad.vbo_count} units — already split` : kad.vbo_count != null ? 'Single unit — not split' : 'Could not determine', kad.is_split ? 'warn' : '', 'VBO count in building'],
+                ['Officieel adres',      kad.official_address ?? '—',                             '',     'Via PDOK Locatieserver'],
+                ['Geregistreerd opp.',   kad.official_sqm ? `${kad.official_sqm} m²` : '—',      '',     'Uit BAG verblijfsobject'],
+                ['Officieel bouwjaar',   String(kad.official_year ?? '—'),                        '',     'Uit BAG pandregister'],
+                ['Geregistreerd gebruik',kad.usage ?? '—',                                        '',     'Gebruiksdoel'],
+                ['BAG-status',           kad.status ?? '—',                                       '',     'Huidige registratiestatus'],
+                ['Splitsingstatus',      kad.is_split ? `${kad.vbo_count} eenheden — al gesplitst` : kad.vbo_count != null ? 'Enkelvoudig — niet gesplitst' : 'Kon niet bepalen', kad.is_split ? 'warn' : '', 'VBO-telling in pand'],
               ].map(([lbl, val, cls, sub]) => (
                 <div className={`kad-box ${cls}`} key={lbl}>
                   <div className="kad-lbl">{lbl}</div>
@@ -33,30 +33,30 @@ export default function Kadaster({ d }) {
               ))}
             </div>
             {kad.is_split
-              ? <div className="note note-y">⚠️ This building has {kad.vbo_count} registered units — it is already split. Verify ownership and permits carefully before bidding.</div>
+              ? <div className="note note-y">⚠️ Dit pand heeft {kad.vbo_count} geregistreerde eenheden — het is al gesplitst. Controleer eigendom en vergunningen zorgvuldig voor het bieden.</div>
               : d.sqm >= 100
-                ? <div className="note note-b">💡 Single registered unit. At {d.sqm}m² a split into 2 apartments may be viable — check zoning with the gemeente.</div>
-                : <div className="note note-g">✓ Single registered unit — no split complications.</div>
+                ? <div className="note note-b">💡 Enkelvoudige registratie. Bij {d.sqm}m² kan splitsing in 2 appartementen haalbaar zijn — check bestemmingsplan bij de gemeente.</div>
+                : <div className="note note-g">✓ Enkelvoudige registratie — geen splitsingscomplexiteit.</div>
             }
-            {kad.bag_id && <div className="note note-n" style={{ fontSize: 11, marginTop: 8 }}>BAG object ID: <code>{kad.bag_id}</code></div>}
+            {kad.bag_id && <div className="note note-n" style={{ fontSize: 11, marginTop: 8 }}>BAG object-ID: <code>{kad.bag_id}</code></div>}
           </>
         ) : (
           <>
-            <div className="note note-y">⚠️ {kad.error ?? 'Address not found'}. <a href="https://bagviewer.kadaster.nl" target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>Search manually ↗</a></div>
+            <div className="note note-y">⚠️ {kad.error ?? 'Adres niet gevonden'}. <a href="https://bagviewer.kadaster.nl" target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>Handmatig zoeken ↗</a></div>
             <div style={{ marginTop: 16, fontSize: 13, color: '#52525B', lineHeight: 1.8 }}>
-              <strong>To look up manually:</strong><br />
-              1. Go to <a href="https://bagviewer.kadaster.nl" target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>bagviewer.kadaster.nl</a><br />
-              2. Type the property address in the search box<br />
-              3. Click the building to see split status, registered area and building details
+              <strong>Handmatig opzoeken:</strong><br />
+              1. Ga naar <a href="https://bagviewer.kadaster.nl" target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>bagviewer.kadaster.nl</a><br />
+              2. Typ het adres in het zoekvak<br />
+              3. Klik op het pand voor splitsingstatus, oppervlakte en bouwdetails
             </div>
           </>
         )}
       </div>
 
       <div className="card">
-        <div className="card-title">Comparable Sales in Neighbourhood</div>
+        <div className="card-title">Vergelijkbare verkopen in de buurt</div>
         <div className="comp-hd">
-          <div>Address</div><div style={{textAlign:'right'}}>Year</div><div style={{textAlign:'right'}}>Sold price</div><div style={{textAlign:'right'}}>€/m²</div><div style={{textAlign:'right'}}>vs subject</div>
+          <div>Adres</div><div style={{textAlign:'right'}}>Jaar</div><div style={{textAlign:'right'}}>Verkoopprijs</div><div style={{textAlign:'right'}}>€/m²</div><div style={{textAlign:'right'}}>vs object</div>
         </div>
         {valid.map((c, i) => {
           const cppm = Math.floor(c.price / Math.max(c.sqm, 1));
@@ -77,7 +77,7 @@ export default function Kadaster({ d }) {
           const avg = Math.floor(valid.reduce((s, c) => s + Math.floor(c.price / Math.max(c.sqm, 1)), 0) / valid.length);
           const da  = subjectPpm - avg;
           return <div className={`note ${da < 0 ? 'note-g' : 'note-y'}`} style={{ marginTop: 10 }}>
-            📊 {da < 0 ? `Subject is ${fmt(Math.abs(da))}/m² below neighbourhood avg of ${fmt(avg)}/m² — potential upside.` : `Subject is ${fmt(da)}/m² above neighbourhood avg of ${fmt(avg)}/m² — priced at premium.`}
+            📊 {da < 0 ? `Object ligt ${fmt(Math.abs(da))}/m² onder het buurtgemiddelde van ${fmt(avg)}/m² — potentieel voordeel.` : `Object ligt ${fmt(da)}/m² boven het buurtgemiddelde van ${fmt(avg)}/m² — vraagprijs aan de hoge kant.`}
           </div>;
         })()}
       </div>

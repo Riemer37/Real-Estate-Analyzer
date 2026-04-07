@@ -7,8 +7,8 @@ import Acquisition  from './tabs/Acquisition';
 import Renovation   from './tabs/Renovation';
 import ExitStrategy from './tabs/ExitStrategy';
 
-const TABS = ['📋 Overview', '🗂️ Kadaster', '🔑 Acquisition', '🔨 Renovation', '📈 Exit strategy'];
-const STEPS = ['Fetching listing page', 'Extracting property data', 'Querying Kadaster PDOK', 'Analysing comparable sales', 'Building investment model'];
+const TABS = ['📋 Overzicht', '🗂️ Kadaster', '🔑 Aankoop', '🔨 Renovatie', '📈 Exitstrategie'];
+const STEPS = ['Pagina ophalen', 'Woninggegevens extraheren', 'Kadaster PDOK raadplegen', 'Vergelijkbare verkopen analyseren', 'Investeringsmodel bouwen'];
 
 export default function Dashboard() {
   const [url,      setUrl]      = useState('');
@@ -64,7 +64,7 @@ export default function Dashboard() {
 
   const sc       = data?.investment_score ?? 5;
   const scCol    = sc >= 7 ? '#15803D' : sc >= 5 ? '#B45309' : '#B91C1C';
-  const scLabel  = sc >= 7 ? 'Strong buy' : sc >= 5 ? 'Conditional' : 'Avoid';
+  const scLabel  = sc >= 7 ? 'Sterke koop' : sc >= 5 ? 'Voorwaardelijk' : 'Vermijden';
   const energy   = data?.energy ?? 'C';
   const kad      = data?.kadaster ?? {};
   const acq      = totalAcq ?? (data?.price ?? 0) * 1.115;
@@ -83,16 +83,16 @@ export default function Dashboard() {
           value={url}
           onChange={e => setUrl(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && analyze()}
-          placeholder="Paste listing URL…"
+          placeholder="Plak listing URL…"
           style={{ width: '100%', padding: '8px 10px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, marginBottom: 8, outline: 'none' }}
         />
         <button onClick={analyze} style={{ width: '100%', padding: '8px 12px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, cursor: 'pointer' }}>
-          Analyze property →
+          Woning analyseren →
         </button>
         {saved.length > 0 && (
           <>
             <div className="sb-div" />
-            <div className="sb-section">Saved properties</div>
+            <div className="sb-section">Opgeslagen woningen</div>
             {saved.map((p, i) => (
               <div key={i} style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
                 <button onClick={() => { setData(p); setActiveTab(0); setTotalAcq(p.price * 1.115); setRenoState({ reno: p.reno_cost, uplift: p.reno_cost * 0.7, healthyMin: (p.price * 1.115 + p.reno_cost) * (p.healthy_margin / 100) }); }}
@@ -110,7 +110,7 @@ export default function Dashboard() {
       <main style={{ marginLeft: 220, flex: 1, padding: 28, minWidth: 0 }}>
         {loading && (
           <div style={{ padding: '80px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22 }}>
-            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, color: '#1C1C1E' }}>Analysing property</div>
+            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, color: '#1C1C1E' }}>Woning analyseren</div>
             <div style={{ fontSize: 11, color: '#A1A1AA', maxWidth: 380, textAlign: 'center', wordBreak: 'break-all' }}>{url.slice(0, 70)}{url.length > 70 ? '…' : ''}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: 380 }}>
               {STEPS.map((s, j) => {
@@ -127,14 +127,14 @@ export default function Dashboard() {
 
         {!loading && !data && (
           <>
-            <div className="hero"><div className="hero-img" /><div className="hero-content"><div className="hero-title">Real estate investment,<br />made analytical.</div><div className="hero-desc">Paste any Dutch listing URL for a complete investment dossier — Kadaster data, risk scoring, comparable sales and exit strategy.</div></div></div>
+            <div className="hero"><div className="hero-img" /><div className="hero-content"><div className="hero-title">Vastgoedinvestering,<br />analytisch gemaakt.</div><div className="hero-desc">Plak een Nederlandse woninglink voor een compleet investeringsdossier — Kadasterdata, risicoscore, vergelijkbare verkopen en exitstrategie.</div></div></div>
             <div className="feat-row">
-              {[['🏠','Property extraction','Price, m², energy label and condition pulled from any listing automatically.'],['🗂️','Kadaster BAG records','Official split status, registered area, build year and usage via PDOK API.'],['⚠️','Risk analysis','Location, condition, market and liquidity risk with an overall score.'],['📈','Exit strategy','Full sell or rent ROI with healthy margin threshold and payback period.']].map(([ico,name,txt]) => (
+              {[['🏠','Woningdata','Prijs, m², energielabel en staat automatisch opgehaald uit elke listing.'],['🗂️','Kadaster BAG','Officiële splitsingstatus, oppervlakte, bouwjaar en gebruik via PDOK API.'],['⚠️','Risicoanalyse','Locatie-, staat-, markt- en liquiditeitsrisico met een totaalscore.'],['📈','Exitstrategie','Volledig verkoop- of verhuur-ROI met gezonde marge en terugverdientijd.']].map(([ico,name,txt]) => (
                 <div className="feat" key={name}><div className="feat-ico">{ico}</div><div className="feat-name">{name}</div><div className="feat-txt">{txt}</div></div>
               ))}
             </div>
             <div className="pill-row">
-              {[['🏗️','Works with','Funda · Pararius · Vendr · more'],['🗺️','Kadaster source','PDOK BAG — Official Dutch registry'],['🤖','Powered by','Claude AI (Anthropic)']].map(([ico,lbl,val]) => (
+              {[['🏗️','Werkt met','Funda · Pararius · Vendr · meer'],['🗺️','Kadasterbron','PDOK BAG — Officieel Nederlands register'],['🤖','Aangedreven door','Claude AI (Anthropic)']].map(([ico,lbl,val]) => (
                 <div className="pill" key={lbl}><div className="pill-ico">{ico}</div><div><div className="pill-lbl">{lbl}</div><div className="pill-val">{val}</div></div></div>
               ))}
             </div>
@@ -148,13 +148,13 @@ export default function Dashboard() {
               <div>
                 <div className="prop-title">{data.address}</div>
                 <div className="prop-meta">
-                  {data.property_type} &nbsp;·&nbsp; {data.sqm} m² &nbsp;·&nbsp; {data.rooms} rooms &nbsp;·&nbsp; Built {data.year} &nbsp;·&nbsp; <span className={`eb eb-${energy}`}>{energy}</span>
-                  &nbsp;&nbsp;<a href={data.url} target="_blank" rel="noreferrer">View listing ↗</a>
+                  {data.property_type} &nbsp;·&nbsp; {data.sqm} m² &nbsp;·&nbsp; {data.rooms} kamers &nbsp;·&nbsp; Gebouwd {data.year} &nbsp;·&nbsp; <span className={`eb eb-${energy}`}>{energy}</span>
+                  &nbsp;&nbsp;<a href={data.url} target="_blank" rel="noreferrer">Bekijk listing ↗</a>
                   {kad.bag_viewer_url && <>&nbsp;·&nbsp;<a href={kad.bag_viewer_url} target="_blank" rel="noreferrer">Open in Kadaster ↗</a></>}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={saveProperty} style={{ padding: '8px 16px', background: '#1C1C1E', color: '#FAFAFA', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>💾 Save</button>
+                <button onClick={saveProperty} style={{ padding: '8px 16px', background: '#1C1C1E', color: '#FAFAFA', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>💾 Opslaan</button>
                 <div className="score-wrap">
                   <div style={{ fontSize: 9, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '.1em' }}>Score</div>
                   <div className="score-num" style={{ color: scCol }}>{sc}<span style={{ fontSize: 14, color: '#C0BDB8', fontWeight: 400 }}>/10</span></div>
@@ -166,12 +166,12 @@ export default function Dashboard() {
             {/* KPI strip */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 14 }}>
               {[
-                ['Asking price',  fmt(data.price),              fmt(Math.floor(data.price / Math.max(data.sqm,1))) + '/m²',                                                              'blue'],
-                ['Fair value',    fmt(data.fair_value),         data.fair_value > data.price ? 'Above asking' : 'Below asking',                                                           data.fair_value > data.price ? 'green' : 'amber'],
-                ['Renovation',    fmt(data.reno_cost),          'Uplift ≈ +' + fmt(data.reno_cost * 0.7),                                                                                 'amber'],
-                ['Market rent',   fmt(data.monthly_rent) + '/mo', 'Yield ' + (data.monthly_rent * 12 / (data.fair_value + data.reno_cost * 0.7) * 100).toFixed(1) + '%',                 'green'],
-                ['Risk score',    data.risk_score + '/10',      data.risk_score <= 3 ? 'Low' : data.risk_score <= 6 ? 'Moderate' : 'High risk',                                          data.risk_score <= 3 ? 'green' : data.risk_score <= 6 ? 'amber' : 'red'],
-                ['Min margin',    data.healthy_margin + '%',    'Min ' + fmt((data.price + data.reno_cost) * data.healthy_margin / 100),                                                  'purple'],
+                ['Vraagprijs',     fmt(data.price),              fmt(Math.floor(data.price / Math.max(data.sqm,1))) + '/m²',                                                              'blue'],
+                ['Marktwaarde',   fmt(data.fair_value),         data.fair_value > data.price ? 'Boven vraagprijs' : 'Onder vraagprijs',                                                   data.fair_value > data.price ? 'green' : 'amber'],
+                ['Renovatie',     fmt(data.reno_cost),          'Waardestijging ≈ +' + fmt(data.reno_cost * 0.7),                                                                         'amber'],
+                ['Markthuur',     fmt(data.monthly_rent) + '/mnd', 'Rendement ' + (data.monthly_rent * 12 / (data.fair_value + data.reno_cost * 0.7) * 100).toFixed(1) + '%',            'green'],
+                ['Risicoscore',   data.risk_score + '/10',      data.risk_score <= 3 ? 'Laag' : data.risk_score <= 6 ? 'Gemiddeld' : 'Hoog risico',                                      data.risk_score <= 3 ? 'green' : data.risk_score <= 6 ? 'amber' : 'red'],
+                ['Min. marge',    data.healthy_margin + '%',    'Min. ' + fmt((data.price + data.reno_cost) * data.healthy_margin / 100),                                                 'purple'],
               ].map(([lbl, val, hint, cls]) => (
                 <div className="kpi" key={lbl}><div className="kpi-l">{lbl}</div><div className={`kpi-v ${cls}`}>{val}</div><div className="kpi-s">{hint}</div></div>
               ))}
