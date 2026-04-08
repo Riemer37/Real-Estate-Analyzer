@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import { fmt } from '@/lib/utils';
 import Overview     from './tabs/Overview';
 import Kadaster     from './tabs/Kadaster';
+import Potentieel   from './tabs/Potentieel';
 import Acquisition  from './tabs/Acquisition';
 import Renovation   from './tabs/Renovation';
 import ExitStrategy from './tabs/ExitStrategy';
 
-const TABS = ['Overzicht', 'Kadaster', 'Aankoop', 'Renovatie', 'Exitstrategie'];
+const TABS = ['Overzicht', 'Kadaster', 'Potentieel', 'Aankoop', 'Renovatie', 'Exitstrategie'];
 const STEPS = ['Pagina ophalen', 'Woninggegevens extraheren', 'Kadaster PDOK raadplegen', 'Vergelijkbare verkopen analyseren', 'Investeringsmodel bouwen'];
 
 export default function Dashboard() {
@@ -197,9 +198,10 @@ export default function Dashboard() {
 
             {activeTab === 0 && <Overview d={data} />}
             {activeTab === 1 && <Kadaster d={data} />}
-            {activeTab === 2 && <Acquisition d={data} onUpdate={setTotalAcq} />}
-            {activeTab === 3 && <Renovation d={data} totalAcq={acq} onUpdate={setRenoState} />}
-            {activeTab === 4 && <ExitStrategy d={data} totalAcq={acq} reno={reno} uplift={uplift} healthyMin={hMin} />}
+            {activeTab === 2 && <Potentieel d={data} />}
+            {activeTab === 3 && <Acquisition d={data} onUpdate={setTotalAcq} />}
+            {activeTab === 4 && <Renovation d={data} totalAcq={acq} onUpdate={setRenoState} />}
+            {activeTab === 5 && <ExitStrategy d={data} totalAcq={acq} reno={reno} uplift={uplift} healthyMin={hMin} />}
           </>
         )}
 
