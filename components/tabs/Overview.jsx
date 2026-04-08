@@ -10,7 +10,7 @@ export default function Overview({ d }) {
       <div className="card">
         <div className="card-title">Investeringsthese</div>
         <div style={{ fontSize: 13.5, color: '#3F3F46', lineHeight: 1.85, marginBottom: 14 }}>{d.full_analysis}</div>
-        <div className="note note-b">💡 {d.advice}</div>
+        <div className="note note-b">{d.advice}</div>
         {[['Staat', d.condition], ['Renovatiescope', d.reno_items], ['Geanalyseerd', d.saved_at ?? '—']].map(([k, v]) => (
           <div className="row" key={k}><span className="rk">{k}</span><span className="rv">{v}</span></div>
         ))}

@@ -50,7 +50,7 @@ export default function Kadaster({ d }) {
                 </div>
                 {kad.woz_huidig && (
                   <div className="note note-b" style={{ marginTop: 8 }}>
-                    🏛️ Huidige WOZ-waarde ({kad.woz_jaar}): <strong>{fmt(kad.woz_huidig)}</strong>
+                    Huidige WOZ-waarde ({kad.woz_jaar}): <strong>{fmt(kad.woz_huidig)}</strong>
                     {kad.official_sqm ? ` · ${fmt(Math.round(kad.woz_huidig / kad.official_sqm))}/m²` : ''}
                   </div>
                 )}
@@ -85,7 +85,7 @@ export default function Kadaster({ d }) {
                 </div>
                 {kad.laatste_koopsom && (
                   <div className="note note-b" style={{ marginTop: 8 }}>
-                    💰 Laatste geregistreerde koopsom: <strong>{fmt(kad.laatste_koopsom)}</strong>
+                    Laatste geregistreerde koopsom: <strong>{fmt(kad.laatste_koopsom)}</strong>
                     {kad.laatste_koopsom_datum ? ` (${kad.laatste_koopsom_datum})` : ''}
                   </div>
                 )}
@@ -111,10 +111,10 @@ export default function Kadaster({ d }) {
             )}
 
             {kad.is_split
-              ? <div className="note note-y" style={{ marginTop: 10 }}>⚠️ Dit pand heeft {kad.vbo_count} geregistreerde eenheden — het is al gesplitst. Controleer eigendom en vergunningen zorgvuldig voor het bieden.</div>
+              ? <div className="note note-y" style={{ marginTop: 10 }}>Dit pand heeft {kad.vbo_count} geregistreerde eenheden — het is al gesplitst. Controleer eigendom en vergunningen zorgvuldig voor het bieden.</div>
               : d.sqm >= 100
-                ? <div className="note note-b" style={{ marginTop: 10 }}>💡 Enkelvoudige registratie. Bij {d.sqm}m² kan splitsing in 2 appartementen haalbaar zijn — check bestemmingsplan bij de gemeente.</div>
-                : <div className="note note-g" style={{ marginTop: 10 }}>✓ Enkelvoudige registratie — geen splitsingscomplexiteit.</div>
+                ? <div className="note note-b" style={{ marginTop: 10 }}>Enkelvoudige registratie. Bij {d.sqm}m² kan splitsing in 2 appartementen haalbaar zijn — check bestemmingsplan bij de gemeente.</div>
+                : <div className="note note-g" style={{ marginTop: 10 }}>Enkelvoudige registratie — geen splitsingscomplexiteit.</div>
             }
             {kad.bag_id && <div className="note note-n" style={{ fontSize: 11, marginTop: 8 }}>BAG object-ID: <code>{kad.bag_id}</code></div>}
           </>
@@ -155,7 +155,7 @@ export default function Kadaster({ d }) {
           const avg = Math.floor(valid.reduce((s, c) => s + Math.floor(c.price / Math.max(c.sqm, 1)), 0) / valid.length);
           const da  = subjectPpm - avg;
           return <div className={`note ${da < 0 ? 'note-g' : 'note-y'}`} style={{ marginTop: 10 }}>
-            📊 {da < 0 ? `Object ligt ${fmt(Math.abs(da))}/m² onder het buurtgemiddelde van ${fmt(avg)}/m² — potentieel voordeel.` : `Object ligt ${fmt(da)}/m² boven het buurtgemiddelde van ${fmt(avg)}/m² — vraagprijs aan de hoge kant.`}
+            {da < 0 ? `Object ligt ${fmt(Math.abs(da))}/m² onder het buurtgemiddelde van ${fmt(avg)}/m² — potentieel voordeel.` : `Object ligt ${fmt(da)}/m² boven het buurtgemiddelde van ${fmt(avg)}/m² — vraagprijs aan de hoge kant.`}
           </div>;
         })()}
       </div>

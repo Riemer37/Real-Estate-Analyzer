@@ -15,7 +15,7 @@ export default function Renovation({ d, totalAcq, onUpdate }) {
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       <div className="card">
         <div className="card-title">Renovatiescope</div>
-        <div className="note note-b" style={{ marginBottom: 12 }}>🔧 {d.reno_items}</div>
+        <div className="note note-b" style={{ marginBottom: 12 }}>{d.reno_items}</div>
         <label style={{ fontSize: 12, color: '#71717A' }}>Renovatiebudget (€)</label>
         <input type="number" value={reno} step={1000} onChange={e => setReno(+e.target.value)} style={{ width: '100%', padding: '6px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, margin: '6px 0 12px' }} />
         {[

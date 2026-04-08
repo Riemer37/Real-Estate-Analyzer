@@ -7,7 +7,7 @@ import Acquisition  from './tabs/Acquisition';
 import Renovation   from './tabs/Renovation';
 import ExitStrategy from './tabs/ExitStrategy';
 
-const TABS = ['📋 Overzicht', '🗂️ Kadaster', '🔑 Aankoop', '🔨 Renovatie', '📈 Exitstrategie'];
+const TABS = ['Overzicht', 'Kadaster', 'Aankoop', 'Renovatie', 'Exitstrategie'];
 const STEPS = ['Pagina ophalen', 'Woninggegevens extraheren', 'Kadaster PDOK raadplegen', 'Vergelijkbare verkopen analyseren', 'Investeringsmodel bouwen'];
 
 export default function Dashboard() {
@@ -138,13 +138,13 @@ export default function Dashboard() {
           <>
             <div className="hero"><div className="hero-img" /><div className="hero-content"><div className="hero-title">Vastgoedinvestering,<br />analytisch gemaakt.</div><div className="hero-desc">Plak een woninglink of typ een adres voor een compleet investeringsdossier — Kadasterdata, risicoscore, vergelijkbare verkopen en exitstrategie.</div></div></div>
             <div className="feat-row">
-              {[['🏠','Woningdata','Prijs, m², energielabel en staat automatisch opgehaald uit elke listing.'],['🗂️','Kadaster BAG','Officiële splitsingstatus, oppervlakte, bouwjaar en gebruik via PDOK API.'],['⚠️','Risicoanalyse','Locatie-, staat-, markt- en liquiditeitsrisico met een totaalscore.'],['📈','Exitstrategie','Volledig verkoop- of verhuur-ROI met gezonde marge en terugverdientijd.']].map(([ico,name,txt]) => (
-                <div className="feat" key={name}><div className="feat-ico">{ico}</div><div className="feat-name">{name}</div><div className="feat-txt">{txt}</div></div>
+              {[['Woningdata','Prijs, m², energielabel en staat automatisch opgehaald uit elke listing.'],['Kadaster BAG','Officiële splitsingstatus, oppervlakte, bouwjaar en gebruik via PDOK API.'],['Risicoanalyse','Locatie-, staat-, markt- en liquiditeitsrisico met een totaalscore.'],['Exitstrategie','Volledig verkoop- of verhuur-ROI met gezonde marge en terugverdientijd.']].map(([name,txt]) => (
+                <div className="feat" key={name}><div className="feat-name">{name}</div><div className="feat-txt">{txt}</div></div>
               ))}
             </div>
             <div className="pill-row">
-              {[['🏗️','Werkt met','Funda · Pararius · Vendr · meer'],['🗺️','Kadasterbron','PDOK BAG — Officieel Nederlands register'],['🤖','Aangedreven door','Claude AI (Anthropic)']].map(([ico,lbl,val]) => (
-                <div className="pill" key={lbl}><div className="pill-ico">{ico}</div><div><div className="pill-lbl">{lbl}</div><div className="pill-val">{val}</div></div></div>
+              {[['Werkt met','Funda · Pararius · Vendr · meer'],['Kadasterbron','PDOK BAG — Officieel Nederlands register'],['Aangedreven door','Claude AI (Anthropic)']].map(([lbl,val]) => (
+                <div className="pill" key={lbl}><div><div className="pill-lbl">{lbl}</div><div className="pill-val">{val}</div></div></div>
               ))}
             </div>
           </>
@@ -163,7 +163,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={saveProperty} style={{ padding: '8px 16px', background: '#1C1C1E', color: '#FAFAFA', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>💾 Opslaan</button>
+                <button onClick={saveProperty} style={{ padding: '8px 16px', background: '#1C1C1E', color: '#FAFAFA', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Opslaan</button>
                 <div className="score-wrap">
                   <div style={{ fontSize: 9, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '.1em' }}>Score</div>
                   <div className="score-num" style={{ color: scCol }}>{sc}<span style={{ fontSize: 14, color: '#C0BDB8', fontWeight: 400 }}>/10</span></div>

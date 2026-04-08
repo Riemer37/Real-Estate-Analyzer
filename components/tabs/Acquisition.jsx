@@ -38,7 +38,7 @@ export default function Acquisition({ d, onUpdate }) {
         ))}
         <div className="row"><span style={{ fontWeight: 600, color: '#1C1C1E' }}>Totale aankoop</span><span style={{ fontWeight: 700, color: '#1D4ED8' }}>{fmt(totalAcq)}</span></div>
         {diffFmv < 0
-          ? <div className="note note-g" style={{ marginTop: 10 }}>✓ {fmt(Math.abs(diffFmv))} onder marktwaarde — goed instapmoment.</div>
+          ? <div className="note note-g" style={{ marginTop: 10 }}>{fmt(Math.abs(diffFmv))} onder marktwaarde — goed instapmoment.</div>
           : <div className="note note-y" style={{ marginTop: 10 }}>↑ {fmt(diffFmv)} boven marktwaarde — onderhandel naar beneden.</div>
         }
       </div>

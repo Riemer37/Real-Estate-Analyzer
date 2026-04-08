@@ -40,7 +40,7 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
   return (
     <div>
       <div style={{ display: 'flex', gap: 4, background: '#F4F4F5', borderRadius: 10, padding: 4, marginBottom: 16, width: 'fit-content' }}>
-        {[['sell', '🏷️ Verkopen na renovatie'], ['rent', '🏘️ Verhuren']].map(([key, label]) => (
+        {[['sell', 'Verkopen na renovatie'], ['rent', 'Verhuren']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, background: tab === key ? '#fff' : 'transparent', color: tab === key ? '#1C1C1E' : '#71717A', boxShadow: tab === key ? '0 1px 3px rgba(0,0,0,.08)' : 'none' }}>
             {label}
           </button>
@@ -82,10 +82,10 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
             );
           })()}
           {marginOk
-            ? <div className="note note-g" style={{ marginTop: 12 }}>✓ Winst {fmt(net)} ({roi.toFixed(1)}% ROI) overstijgt de gezonde marge van {fmt(healthyMin)} ({d.healthy_margin}%)</div>
+            ? <div className="note note-g" style={{ marginTop: 12 }}>Winst {fmt(net)} ({roi.toFixed(1)}% ROI) overstijgt de gezonde marge van {fmt(healthyMin)} ({d.healthy_margin}%)</div>
             : net > 0
               ? <div className="note note-y" style={{ marginTop: 12 }}>Winstgevend maar onder de gezonde marge — verlaag bod of renovatieomvang.</div>
-              : <div className="note note-r" style={{ marginTop: 12 }}>✕ Deal werkt niet. Maximaal haalbaar bod: {fmt(arv - healthyMin - reno - (agent + costs))}</div>
+              : <div className="note note-r" style={{ marginTop: 12 }}>Deal werkt niet bij deze parameters. Maximaal haalbaar bod: {fmt(arv - healthyMin - reno - (agent + costs))}</div>
           }
         </>
       )}
