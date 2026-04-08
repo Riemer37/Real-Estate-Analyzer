@@ -24,15 +24,24 @@ export default function Dashboard() {
     try { setSaved(JSON.parse(localStorage.getItem('saved_properties') ?? '[]')); } catch {}
   }, []);
 
+  function isUrl(input) {
+    return /^https?:\/\//i.test(input.trim());
+  }
+
   async function analyze() {
     if (!url) return;
     setLoading(true);
     setStep(0);
 
+    const isAddress = !isUrl(url);
+    const endpoint  = isAddress ? '/api/address' : '/api/analyze';
+    const body      = isAddress ? { address: url } : { url };
+
     const ticker = setInterval(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 700);
     try {
-      const res  = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+      const res  = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const json = await res.json();
+      if (json.error) throw new Error(json.error);
       clearInterval(ticker);
       setData(json);
       setTotalAcq(json.price * 1.115);
@@ -40,7 +49,7 @@ export default function Dashboard() {
       setActiveTab(0);
     } catch (e) {
       clearInterval(ticker);
-      alert('Error: ' + e.message);
+      alert('Fout: ' + e.message);
     }
     setLoading(false);
   }
@@ -83,7 +92,7 @@ export default function Dashboard() {
           value={url}
           onChange={e => setUrl(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && analyze()}
-          placeholder="Plak listing URL…"
+          placeholder="URL of adres (bijv. Hoofdstraat 1, Amsterdam)…"
           style={{ width: '100%', padding: '8px 10px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, marginBottom: 8, outline: 'none' }}
         />
         <button onClick={analyze} style={{ width: '100%', padding: '8px 12px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, cursor: 'pointer' }}>
@@ -127,7 +136,7 @@ export default function Dashboard() {
 
         {!loading && !data && (
           <>
-            <div className="hero"><div className="hero-img" /><div className="hero-content"><div className="hero-title">Vastgoedinvestering,<br />analytisch gemaakt.</div><div className="hero-desc">Plak een Nederlandse woninglink voor een compleet investeringsdossier — Kadasterdata, risicoscore, vergelijkbare verkopen en exitstrategie.</div></div></div>
+            <div className="hero"><div className="hero-img" /><div className="hero-content"><div className="hero-title">Vastgoedinvestering,<br />analytisch gemaakt.</div><div className="hero-desc">Plak een woninglink of typ een adres voor een compleet investeringsdossier — Kadasterdata, risicoscore, vergelijkbare verkopen en exitstrategie.</div></div></div>
             <div className="feat-row">
               {[['🏠','Woningdata','Prijs, m², energielabel en staat automatisch opgehaald uit elke listing.'],['🗂️','Kadaster BAG','Officiële splitsingstatus, oppervlakte, bouwjaar en gebruik via PDOK API.'],['⚠️','Risicoanalyse','Locatie-, staat-, markt- en liquiditeitsrisico met een totaalscore.'],['📈','Exitstrategie','Volledig verkoop- of verhuur-ROI met gezonde marge en terugverdientijd.']].map(([ico,name,txt]) => (
                 <div className="feat" key={name}><div className="feat-ico">{ico}</div><div className="feat-name">{name}</div><div className="feat-txt">{txt}</div></div>
