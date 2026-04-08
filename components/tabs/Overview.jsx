@@ -10,11 +10,25 @@ export default function Overview({ d }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-    {pv?.waarschuwing && (
-      <div className="note note-y">{pv.waarschuwing}{pv.stat_prijs_per_m2 ? ` Statistisch €/m²: ${fmt(pv.stat_prijs_per_m2)}.` : ''}</div>
-    )}
-    {pv && !pv.waarschuwing && (
-      <div className="note note-g">AI-schatting en statistische berekening komen overeen (afwijking {pv.afwijking_pct}%) — marktwaarde betrouwbaar.</div>
+    {pv && (
+      <div style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Marktwaarde methode</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#1C1C1E' }}>{pv.waarde_methode}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Statistisch (comps)</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#1C1C1E' }}>{fmt(pv.stat_fair_value)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>AI-schatting</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#71717A' }}>{fmt(pv.ai_fair_value)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Afwijking</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: pv.betrouwbaar ? '#15803D' : '#B45309' }}>{pv.afwijking_pct}% {pv.betrouwbaar ? '— betrouwbaar' : '— let op'}</div>
+        </div>
+      </div>
     )}
     {d.cbs_gem_prijs && (
       <div className="note note-n" style={{ fontSize: 11 }}>

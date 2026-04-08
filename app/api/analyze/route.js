@@ -136,46 +136,54 @@ TRANSFORMATIE_ADVIES: [3 zinnen: beste kans, grootste belemmering, aanbevolen ee
       };
     } catch { /* transformatieanalyse niet beschikbaar */ }
 
-    // Statistische marktwaarde op basis van koopsommen
+    // Statistische marktwaarde — primaire bron boven AI-schatting
     const sqm        = pn(d.SQM, 85);
-    const fair_value = pn(d.FAIR_VALUE, price);
-    let stat_fair_value  = null;
+    const ai_fair_value = pn(d.FAIR_VALUE, price);
+    let stat_fair_value   = null;
     let stat_prijs_per_m2 = null;
-    let prijs_validatie  = null;
+    let prijs_validatie   = null;
 
-    const koopsommen = kad.koopsommen ?? [];
-    const geldigeKoopsommen = koopsommen.filter(k => k.prijs > 0);
-    if (geldigeKoopsommen.length >= 2 && sqm > 0) {
-      // Gebruik koopsommen als ruwe comps — geen oppervlakte in koopsommen API,
-      // dus bereken op basis van listing sqm als proxy voor buurt €/m²
-      const gemPrijs = geldigeKoopsommen.reduce((s, k) => s + k.prijs, 0) / geldigeKoopsommen.length;
-      // Haal ook AI-comps mee als extra datapunten
-      const aiComps = [1,2,3,4].map(i => ({
-        price: pn(d[`COMP${i}_PRICE`], 0),
-        sqm:   pn(d[`COMP${i}_SQM`], 1),
-      })).filter(c => c.price > 0 && c.sqm > 20);
+    // Stap 1: bereken statistisch €/m² uit AI-comps (meest betrouwbare bron)
+    const aiComps = [1,2,3,4].map(i => ({
+      price: pn(d[`COMP${i}_PRICE`], 0),
+      sqm:   pn(d[`COMP${i}_SQM`], 1),
+    })).filter(c => c.price > 0 && c.sqm > 20);
 
-      if (aiComps.length >= 2) {
-        const gemPpmAi = aiComps.reduce((s, c) => s + c.price / c.sqm, 0) / aiComps.length;
-        stat_prijs_per_m2 = Math.round(gemPpmAi);
-        stat_fair_value   = Math.round(gemPpmAi * sqm);
-      } else {
-        // Fallback: gebruik gemiddelde koopsom als marktindicator
-        stat_fair_value = Math.round(gemPrijs);
-      }
+    if (aiComps.length >= 2 && sqm > 0) {
+      const gemPpm = aiComps.reduce((s, c) => s + c.price / c.sqm, 0) / aiComps.length;
+      stat_prijs_per_m2 = Math.round(gemPpm);
+      stat_fair_value   = Math.round(gemPpm * sqm);
+    }
 
-      if (stat_fair_value && fair_value) {
-        const afwijking = Math.abs(fair_value - stat_fair_value) / stat_fair_value * 100;
-        prijs_validatie = {
-          stat_fair_value,
-          stat_prijs_per_m2,
-          afwijking_pct:  Math.round(afwijking),
-          betrouwbaar:    afwijking < 20,
-          waarschuwing:   afwijking >= 20
-            ? `AI-schatting (${(fair_value/1000).toFixed(0)}k) wijkt ${Math.round(afwijking)}% af van statistische berekening (${(stat_fair_value/1000).toFixed(0)}k) — controleer handmatig.`
-            : null,
-        };
-      }
+    // Stap 2: bepaal de definitieve marktwaarde
+    // Prioriteit: statistisch (data) > blend (data+AI) > AI alleen
+    let fair_value;
+    let waarde_methode;
+    if (stat_fair_value && aiComps.length >= 3) {
+      // Genoeg data: statistisch is primair
+      fair_value     = stat_fair_value;
+      waarde_methode = 'Statistisch (comps)';
+    } else if (stat_fair_value) {
+      // Beperkte data: blend 60% statistisch + 40% AI
+      fair_value     = Math.round(stat_fair_value * 0.6 + ai_fair_value * 0.4);
+      waarde_methode = 'Blend (statistisch + AI)';
+    } else {
+      // Geen comp-data: AI is enige bron
+      fair_value     = ai_fair_value;
+      waarde_methode = 'AI-schatting';
+    }
+
+    // Stap 3: sla validatie op voor UI
+    if (stat_fair_value) {
+      const afwijking = Math.abs(ai_fair_value - stat_fair_value) / stat_fair_value * 100;
+      prijs_validatie = {
+        ai_fair_value,
+        stat_fair_value,
+        stat_prijs_per_m2,
+        waarde_methode,
+        afwijking_pct: Math.round(afwijking),
+        betrouwbaar:   afwijking < 20,
+      };
     }
 
     // CBS gemeente gemiddelde verkoopprijs (kwartaaldata)
