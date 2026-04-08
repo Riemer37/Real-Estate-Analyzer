@@ -56,6 +56,8 @@ COMP1_ADDRESS: [nearby sold] COMP1_PRICE: [digits] COMP1_SQM: [digits] COMP1_YEA
 COMP2_ADDRESS: [nearby sold] COMP2_PRICE: [digits] COMP2_SQM: [digits] COMP2_YEAR: [year]
 COMP3_ADDRESS: [nearby sold] COMP3_PRICE: [digits] COMP3_SQM: [digits] COMP3_YEAR: [year]
 COMP4_ADDRESS: [nearby sold] COMP4_PRICE: [digits] COMP4_SQM: [digits] COMP4_YEAR: [year]
+ERFPACHT: [Ja/Nee/Onbekend]
+ERFPACHT_CANON: [jaarlijkse canon in digits only, 0 if unknown]
 HEALTHY_MARGIN: [digits only]
 INVESTMENT_SCORE: [1-10]
 SUMMARY: [2 sentences]
@@ -159,6 +161,8 @@ TRANSFORMATIE_ADVIES: [3 zinnen: beste kans, grootste belemmering, aanbevolen ee
         year:    d[`COMP${i}_YEAR`] ?? '—',
       })),
       healthy_margin:   pn(d.HEALTHY_MARGIN, 15),
+      erfpacht:         d.ERFPACHT ?? 'Onbekend',
+      erfpacht_canon:   pn(d.ERFPACHT_CANON, 0),
       investment_score: pn(d.INVESTMENT_SCORE, 5),
       summary:          d.SUMMARY ?? '',
       advice:           d.ADVICE ?? '',

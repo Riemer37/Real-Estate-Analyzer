@@ -15,7 +15,16 @@ export default function Acquisition({ d, onUpdate }) {
 
   onUpdate?.(totalAcq);
 
+  const erfpacht = d.erfpacht ?? 'Onbekend';
+  const canon    = d.erfpacht_canon ?? 0;
+
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    {erfpacht === 'Ja' && (
+      <div className="note note-r">
+        Erfpacht gedetecteerd — de grond is niet in eigendom.{canon > 0 ? ` Jaarlijkse canon: €${canon.toLocaleString('nl-NL')}.` : ''} Controleer de erfpachtvoorwaarden en de canonherziening vóór het bieden. Dit drukt de marktwaarde en financierbaarheid significant.
+      </div>
+    )}
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       <div className="card">
         <div className="card-title">Bod & Kosten</div>
@@ -56,6 +65,7 @@ export default function Acquisition({ d, onUpdate }) {
           <div style={{ fontSize: 12, color: '#A1A1AA', marginTop: 4 }}>Totale aankoopkosten voor deze woning</div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

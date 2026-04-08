@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { fmt } from '@/lib/utils';
+import { berekenWWS, WWS_SOCIAAL_GRENS, WWS_MIDDEN_GRENS } from '@/lib/wws';
 
 export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) {
   const totalInvested = totalAcq + reno;
@@ -122,6 +123,39 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
             ))}
           </svg>
           {payback > 0 && <div className="note note-b" style={{ marginTop: 8 }}>Volledige investering terugverdiend in circa {payback} jaar bij {fmt(monthlyRent)}/maand.</div>}
+
+          {/* WWS puntentelling */}
+          {(() => {
+            const wws = berekenWWS({ sqm: d.sqm, energy: d.energy, woz_huidig: d.kadaster?.woz_huidig ?? 0 });
+            const barPct = Math.min(Math.round((wws.totaal / 250) * 100), 100);
+            const col = wws.categorie === 'Vrije sector' ? '#15803D' : wws.categorie === 'Middenhuur' ? '#B45309' : '#B91C1C';
+            return (
+              <div style={{ marginTop: 16, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: '18px 20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8' }}>WWS-puntentelling (indicatief)</div>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: col + '20', color: col }}>{wws.categorie}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <div style={{ flex: 1, height: 6, background: '#F4F4F5', borderRadius: 99, overflow: 'hidden', position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: `${(WWS_SOCIAAL_GRENS/250)*100}%`, top: 0, bottom: 0, width: 1, background: '#E4E4E7' }} />
+                    <div style={{ position: 'absolute', left: `${(WWS_MIDDEN_GRENS/250)*100}%`, top: 0, bottom: 0, width: 1, background: '#E4E4E7' }} />
+                    <div style={{ width: `${barPct}%`, height: '100%', background: col, borderRadius: 99 }} />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: col, minWidth: 48 }}>{wws.totaal} pt</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, fontSize: 11, color: '#71717A' }}>
+                  <span>Opp.: +{wws.breakdown.opp_pts} pt</span>
+                  <span>Energielabel: {wws.breakdown.energie_pts >= 0 ? '+' : ''}{wws.breakdown.energie_pts} pt</span>
+                  <span>WOZ: +{wws.breakdown.woz_pts} pt</span>
+                </div>
+                {wws.max_huur && (
+                  <div className="note note-y" style={{ marginTop: 10 }}>
+                    Max. toegestane huurprijs: <strong>€{wws.max_huur.toLocaleString('nl-NL')}/mnd</strong> — hogere huur is juridisch aanvechtbaar.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
     </div>

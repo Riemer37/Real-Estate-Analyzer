@@ -24,6 +24,8 @@ export default function Kadaster({ d }) {
                 ['Geregistreerd gebruik', kad.usage ?? '—',                                                    '',     'Gebruiksdoel'],
                 ['BAG-status',            kad.status ?? '—',                                                   '',     'Huidige registratiestatus'],
                 ['Splitsingstatus',       kad.is_split ? `${kad.vbo_count} eenheden — gesplitst` : kad.vbo_count != null ? 'Enkelvoudig — niet gesplitst' : 'Kon niet bepalen', kad.is_split ? 'warn' : '', 'VBO-telling in pand'],
+                ['Rijksmonument',         kad.is_rijksmonument === true ? `Ja — nr. ${kad.monument_nummer}` : kad.is_rijksmonument === false ? 'Nee' : 'Niet bepaald', kad.is_rijksmonument ? 'warn' : '', 'RCE monumentenregister'],
+                ['Beschermd gezicht',     kad.is_beschermd_gezicht === true ? 'Ja — beschermd stads-/dorpsgezicht' : kad.is_beschermd_gezicht === false ? 'Nee' : 'Niet bepaald', kad.is_beschermd_gezicht ? 'warn' : '', 'RCE erfgoedregister'],
               ].map(([lbl, val, cls, sub]) => (
                 <div className={`kad-box ${cls}`} key={lbl}>
                   <div className="kad-lbl">{lbl}</div>
@@ -116,6 +118,17 @@ export default function Kadaster({ d }) {
                 ? <div className="note note-b" style={{ marginTop: 10 }}>Enkelvoudige registratie. Bij {d.sqm}m² kan splitsing in 2 appartementen haalbaar zijn — check bestemmingsplan bij de gemeente.</div>
                 : <div className="note note-g" style={{ marginTop: 10 }}>Enkelvoudige registratie — geen splitsingscomplexiteit.</div>
             }
+            {kad.is_rijksmonument && (
+              <div className="note note-r" style={{ marginTop: 10 }}>
+                Rijksmonument nr. {kad.monument_nummer} — verbouwingen vereisen vergunning van de gemeente én goedkeuring RCE. Kosten en doorlooptijd aanzienlijk hoger.
+                {kad.monument_url && <> <a href={kad.monument_url} target="_blank" rel="noreferrer" style={{ color: '#991B1B' }}>Bekijk register ↗</a></>}
+              </div>
+            )}
+            {!kad.is_rijksmonument && kad.is_beschermd_gezicht && (
+              <div className="note note-y" style={{ marginTop: 10 }}>
+                Pand ligt in beschermd stads-/dorpsgezicht — uitwendige wijzigingen vereisen een omgevingsvergunning en welstandsadvies.
+              </div>
+            )}
             {kad.bag_id && <div className="note note-n" style={{ fontSize: 11, marginTop: 8 }}>BAG object-ID: <code>{kad.bag_id}</code></div>}
           </>
         ) : (
