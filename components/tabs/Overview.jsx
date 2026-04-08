@@ -1,11 +1,26 @@
 'use client';
+import { fmt } from '@/lib/utils';
 
 export default function Overview({ d }) {
   const rs = d.risk_score;
   const rc = rs <= 3 ? '#15803D' : rs <= 6 ? '#B45309' : '#B91C1C';
   const rl = rs <= 3 ? 'Laag risico' : rs <= 6 ? 'Gemiddeld risico' : 'Hoog risico';
 
+  const pv = d.prijs_validatie;
+
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    {pv?.waarschuwing && (
+      <div className="note note-y">{pv.waarschuwing}{pv.stat_prijs_per_m2 ? ` Statistisch €/m²: ${fmt(pv.stat_prijs_per_m2)}.` : ''}</div>
+    )}
+    {pv && !pv.waarschuwing && (
+      <div className="note note-g">AI-schatting en statistische berekening komen overeen (afwijking {pv.afwijking_pct}%) — marktwaarde betrouwbaar.</div>
+    )}
+    {d.cbs_gem_prijs && (
+      <div className="note note-n" style={{ fontSize: 11 }}>
+        CBS gemeente gemiddelde: <strong>{fmt(d.cbs_gem_prijs.prijs)}</strong> ({d.cbs_gem_prijs.periode})
+      </div>
+    )}
     <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 12 }}>
       <div className="card">
         <div className="card-title">Investeringsthese</div>
@@ -46,6 +61,7 @@ export default function Overview({ d }) {
         })}
         {d.risk_notes && <div className="note note-y" style={{ fontSize: 12, marginTop: 4 }}>{d.risk_notes}</div>}
       </div>
+    </div>
     </div>
   );
 }

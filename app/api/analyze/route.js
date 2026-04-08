@@ -136,9 +136,69 @@ TRANSFORMATIE_ADVIES: [3 zinnen: beste kans, grootste belemmering, aanbevolen ee
       };
     } catch { /* transformatieanalyse niet beschikbaar */ }
 
+    // Statistische marktwaarde op basis van koopsommen
+    const sqm        = pn(d.SQM, 85);
+    const fair_value = pn(d.FAIR_VALUE, price);
+    let stat_fair_value  = null;
+    let stat_prijs_per_m2 = null;
+    let prijs_validatie  = null;
+
+    const koopsommen = kad.koopsommen ?? [];
+    const geldigeKoopsommen = koopsommen.filter(k => k.prijs > 0);
+    if (geldigeKoopsommen.length >= 2 && sqm > 0) {
+      // Gebruik koopsommen als ruwe comps — geen oppervlakte in koopsommen API,
+      // dus bereken op basis van listing sqm als proxy voor buurt €/m²
+      const gemPrijs = geldigeKoopsommen.reduce((s, k) => s + k.prijs, 0) / geldigeKoopsommen.length;
+      // Haal ook AI-comps mee als extra datapunten
+      const aiComps = [1,2,3,4].map(i => ({
+        price: pn(d[`COMP${i}_PRICE`], 0),
+        sqm:   pn(d[`COMP${i}_SQM`], 1),
+      })).filter(c => c.price > 0 && c.sqm > 20);
+
+      if (aiComps.length >= 2) {
+        const gemPpmAi = aiComps.reduce((s, c) => s + c.price / c.sqm, 0) / aiComps.length;
+        stat_prijs_per_m2 = Math.round(gemPpmAi);
+        stat_fair_value   = Math.round(gemPpmAi * sqm);
+      } else {
+        // Fallback: gebruik gemiddelde koopsom als marktindicator
+        stat_fair_value = Math.round(gemPrijs);
+      }
+
+      if (stat_fair_value && fair_value) {
+        const afwijking = Math.abs(fair_value - stat_fair_value) / stat_fair_value * 100;
+        prijs_validatie = {
+          stat_fair_value,
+          stat_prijs_per_m2,
+          afwijking_pct:  Math.round(afwijking),
+          betrouwbaar:    afwijking < 20,
+          waarschuwing:   afwijking >= 20
+            ? `AI-schatting (${(fair_value/1000).toFixed(0)}k) wijkt ${Math.round(afwijking)}% af van statistische berekening (${(stat_fair_value/1000).toFixed(0)}k) — controleer handmatig.`
+            : null,
+        };
+      }
+    }
+
+    // CBS gemeente gemiddelde verkoopprijs (kwartaaldata)
+    let cbs_gem_prijs = null;
+    if (kad.gemeentecode) {
+      try {
+        const cbsCode = kad.gemeentecode.replace(/^0+/, 'GM').padStart(6, '0')
+          .replace(/^GM(\d+)$/, (_, n) => 'GM' + n.padStart(4, '0'));
+        const cbsUrl  = `https://opendata.cbs.nl/ODataApi/odata/83913NED/TypedDataSet?$filter=RegioS+eq+'${cbsCode}'&$orderby=Perioden+desc&$top=1&$select=Perioden,GemiddeldeVerkoopprijs_7`;
+        const cbsR    = await fetch(cbsUrl, { signal: AbortSignal.timeout(8000) });
+        if (cbsR.ok) {
+          const cbsD = await cbsR.json();
+          const rec  = cbsD?.value?.[0];
+          if (rec?.GemiddeldeVerkoopprijs_7) {
+            cbs_gem_prijs = { prijs: rec.GemiddeldeVerkoopprijs_7, periode: rec.Perioden };
+          }
+        }
+      } catch { /* CBS niet beschikbaar */ }
+    }
+
     const result = {
       url, address, price,
-      sqm:           pn(d.SQM, 85),
+      sqm,
       year:          pn(d.YEAR, 1970),
       energy:        (d.ENERGY ?? 'C').trim().toUpperCase().slice(0, 1),
       condition:     d.CONDITION ?? 'Fair',
@@ -146,7 +206,9 @@ TRANSFORMATIE_ADVIES: [3 zinnen: beste kans, grootste belemmering, aanbevolen ee
       rooms:         pn(d.ROOMS, 4),
       reno_items:    d.RENOVATION_ITEMS ?? 'General renovation',
       reno_cost:     pn(d.RENOVATION_COST, 20000),
-      fair_value:    pn(d.FAIR_VALUE, price),
+      fair_value,
+      prijs_validatie,
+      cbs_gem_prijs,
       monthly_rent:  pn(d.MONTHLY_RENT, 1200),
       risk_score:    pn(d.RISK_SCORE, 5),
       risk_location: d.RISK_LOCATION ?? 'Medium',

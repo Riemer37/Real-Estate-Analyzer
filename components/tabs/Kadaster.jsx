@@ -129,6 +129,12 @@ export default function Kadaster({ d }) {
                 Pand ligt in beschermd stads-/dorpsgezicht — uitwendige wijzigingen vereisen een omgevingsvergunning en welstandsadvies.
               </div>
             )}
+            {kad.bestemmingsplan_naam && (
+              <div className="note note-n" style={{ marginTop: 8, fontSize: 11 }}>
+                Bestemmingsplan: <strong>{kad.bestemmingsplan_naam}</strong> · {kad.bestemmingsplan_status ?? '—'} · {kad.bestemmingsplan_datum ?? '—'}
+                {kad.bestemmingsplan_url && <> · <a href={kad.bestemmingsplan_url} target="_blank" rel="noreferrer" style={{ color: '#374151' }}>Bekijk plan ↗</a></>}
+              </div>
+            )}
             {kad.bag_id && <div className="note note-n" style={{ fontSize: 11, marginTop: 8 }}>BAG object-ID: <code>{kad.bag_id}</code></div>}
           </>
         ) : (

@@ -7,12 +7,16 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
   const totalInvested = totalAcq + reno;
   const postRenoVal   = d.fair_value + uplift;
 
-  const [tab,         setTab]        = useState('sell');
-  const [arv,         setArv]        = useState(Math.round(postRenoVal));
-  const [monthlyRent, setMonthlyRent] = useState(d.monthly_rent);
-  const [annualExp,   setAnnualExp]  = useState(2000);
-  const [vacancy,     setVacancy]    = useState(3);
-  const [appr,        setAppr]       = useState(2.5);
+  const [tab,          setTab]         = useState('sell');
+  const [arv,          setArv]         = useState(Math.round(postRenoVal));
+  const [monthlyRent,  setMonthlyRent] = useState(d.monthly_rent);
+  const [annualExp,    setAnnualExp]   = useState(2000);
+  const [vacancy,      setVacancy]     = useState(3);
+  const [appr,         setAppr]        = useState(2.5);
+  const [buitenruimte, setBuiten]      = useState(0);
+  const [aanrechtCm,   setAanrecht]    = useState(200);
+  const [toiletten,    setToiletten]   = useState(1);
+  const [badkamers,    setBadkamers]   = useState(1);
 
   // Sell
   const agent    = arv * 0.015;
@@ -124,9 +128,32 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
           </svg>
           {payback > 0 && <div className="note note-b" style={{ marginTop: 8 }}>Volledige investering terugverdiend in circa {payback} jaar bij {fmt(monthlyRent)}/maand.</div>}
 
-          {/* WWS puntentelling */}
+          {/* WWS invoervelden */}
+          <div style={{ background: '#FAFAF8', border: '1px solid #E4E4E7', borderRadius: 12, padding: '16px 20px', marginTop: 16 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 12 }}>WWS-puntentelling — verfijn de berekening</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, color: '#71717A' }}>Buitenruimte (m²)</label>
+                <input type="number" value={buitenruimte} min={0} step={1} onChange={e => setBuiten(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: '#71717A' }}>Aanrecht (cm)</label>
+                <input type="number" value={aanrechtCm} min={60} step={30} onChange={e => setAanrecht(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: '#71717A' }}>Toiletten</label>
+                <input type="number" value={toiletten} min={1} max={4} onChange={e => setToiletten(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: '#71717A' }}>Badkamers</label>
+                <input type="number" value={badkamers} min={1} max={4} onChange={e => setBadkamers(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
+              </div>
+            </div>
+          </div>
+
+          {/* WWS invoer + puntentelling */}
           {(() => {
-            const wws = berekenWWS({ sqm: d.sqm, energy: d.energy, woz_huidig: d.kadaster?.woz_huidig ?? 0 });
+            const wws = berekenWWS({ sqm: d.sqm, energy: d.energy, woz_huidig: d.kadaster?.woz_huidig ?? 0, buitenruimte, aanrecht_cm: aanrechtCm, toiletten, badkamers });
             const barPct = Math.min(Math.round((wws.totaal / 250) * 100), 100);
             const col = wws.categorie === 'Vrije sector' ? '#15803D' : wws.categorie === 'Middenhuur' ? '#B45309' : '#B91C1C';
             return (
