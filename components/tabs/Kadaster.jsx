@@ -33,6 +33,43 @@ export default function Kadaster({ d }) {
               ))}
             </div>
 
+            {/* WOZ-waarden */}
+            {kad.woz_waarden?.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>
+                  WOZ-waarden (Gemeente) &nbsp;
+                  <a href="https://www.wozwaardeloket.nl" target="_blank" rel="noreferrer" style={{ color: '#60A5FA', fontWeight: 400 }}>WOZ-loket ↗</a>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 8 }}>
+                  {kad.woz_waarden.map((w, i) => (
+                    <div key={i} className={`kad-box ${i === 0 ? 'blue' : ''}`}>
+                      <div className="kad-lbl">WOZ {w.jaar}</div>
+                      <div className={`kad-val ${i === 0 ? 'blue' : ''}`}>{fmt(w.waarde)}</div>
+                    </div>
+                  ))}
+                </div>
+                {kad.woz_huidig && (
+                  <div className="note note-b" style={{ marginTop: 8 }}>
+                    🏛️ Huidige WOZ-waarde ({kad.woz_jaar}): <strong>{fmt(kad.woz_huidig)}</strong>
+                    {kad.official_sqm ? ` · ${fmt(Math.round(kad.woz_huidig / kad.official_sqm))}/m²` : ''}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Energielabel */}
+            {kad.energy_label && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>Energielabel (EP-online / RVO)</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className={`eb eb-${kad.energy_label}`} style={{ fontSize: 18, padding: '4px 14px' }}>{kad.energy_label}</span>
+                  <span style={{ fontSize: 12, color: '#A1A1AA' }}>
+                    Geregistreerd energielabel{kad.energy_label_datum ? ` · ${kad.energy_label_datum}` : ''}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Koopsommen */}
             {kad.koopsommen?.length > 0 && (
               <div style={{ marginTop: 14 }}>

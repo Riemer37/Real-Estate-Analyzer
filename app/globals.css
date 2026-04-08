@@ -59,9 +59,11 @@ html,body{background:#FAFAF8;font-family:'Inter',sans-serif;color:#1C1C1E;}
 .kad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;}
 .kad-box{background:#FAFAF8;border:1px solid #E4E4E7;border-radius:9px;padding:12px 14px;}
 .kad-box.warn{background:#FFFBEB;border-color:#FDE68A;}
+.kad-box.blue{background:#EFF6FF;border-color:#BFDBFE;}
 .kad-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#C0BDB8;margin-bottom:5px;}
 .kad-val{font-size:14px;font-weight:600;color:#1C1C1E;}
 .kad-val.warn{color:#B45309;}
+.kad-val.blue{color:#1D4ED8;}
 .kad-sub{font-size:10px;color:#A1A1AA;margin-top:2px;}
 
 .comp-hd{display:grid;grid-template-columns:2.5fr .8fr 1fr 1fr 1fr;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#C0BDB8;padding-bottom:8px;border-bottom:1px solid #F4F4F5;}
