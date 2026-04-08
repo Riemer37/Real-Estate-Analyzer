@@ -55,6 +55,24 @@ export default function Kadaster({ d }) {
               </div>
             )}
 
+            {/* Eenheden per VBO bij gesplitst pand */}
+            {kad.is_split && kad.vbo_eenheden?.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>
+                  Oppervlakte per eenheid ({kad.vbo_count} VBO's in dit pand)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                  {kad.vbo_eenheden.map((v, i) => (
+                    <div key={i} className="kad-box">
+                      <div className="kad-lbl">Eenheid {i + 1}</div>
+                      <div className="kad-val">{v.oppervlakte ? `${v.oppervlakte} m²` : '—'}</div>
+                      <div className="kad-sub">{v.gebruiksdoel} · {v.status}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {kad.is_split
               ? <div className="note note-y" style={{ marginTop: 10 }}>⚠️ Dit pand heeft {kad.vbo_count} geregistreerde eenheden — het is al gesplitst. Controleer eigendom en vergunningen zorgvuldig voor het bieden.</div>
               : d.sqm >= 100
