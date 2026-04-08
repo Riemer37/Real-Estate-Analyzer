@@ -18,12 +18,12 @@ export default function Kadaster({ d }) {
           <>
             <div className="kad-grid">
               {[
-                ['Officieel adres',      kad.official_address ?? '—',                             '',     'Via PDOK Locatieserver'],
-                ['Geregistreerd opp.',   kad.official_sqm ? `${kad.official_sqm} m²` : '—',      '',     'Uit BAG verblijfsobject'],
-                ['Officieel bouwjaar',   String(kad.official_year ?? '—'),                        '',     'Uit BAG pandregister'],
-                ['Geregistreerd gebruik',kad.usage ?? '—',                                        '',     'Gebruiksdoel'],
-                ['BAG-status',           kad.status ?? '—',                                       '',     'Huidige registratiestatus'],
-                ['Splitsingstatus',      kad.is_split ? `${kad.vbo_count} eenheden — al gesplitst` : kad.vbo_count != null ? 'Enkelvoudig — niet gesplitst' : 'Kon niet bepalen', kad.is_split ? 'warn' : '', 'VBO-telling in pand'],
+                ['Officieel adres',       kad.official_address ?? '—',                                         '',     'Via PDOK Locatieserver'],
+                ['Geregistreerde opp.',   kad.official_sqm ? `${kad.official_sqm} m²` : '—',                  '',     'Uit BAG verblijfsobject'],
+                ['Officieel bouwjaar',    kad.official_year ? String(kad.official_year) : '—',                 '',     'Uit BAG pandregister'],
+                ['Geregistreerd gebruik', kad.usage ?? '—',                                                    '',     'Gebruiksdoel'],
+                ['BAG-status',            kad.status ?? '—',                                                   '',     'Huidige registratiestatus'],
+                ['Splitsingstatus',       kad.is_split ? `${kad.vbo_count} eenheden — gesplitst` : kad.vbo_count != null ? 'Enkelvoudig — niet gesplitst' : 'Kon niet bepalen', kad.is_split ? 'warn' : '', 'VBO-telling in pand'],
               ].map(([lbl, val, cls, sub]) => (
                 <div className={`kad-box ${cls}`} key={lbl}>
                   <div className="kad-lbl">{lbl}</div>
@@ -32,11 +32,34 @@ export default function Kadaster({ d }) {
                 </div>
               ))}
             </div>
+
+            {/* Koopsommen */}
+            {kad.koopsommen?.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>Historische transactieprijzen (Kadaster)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                  {kad.koopsommen.slice(0, 3).map((k, i) => (
+                    <div key={i} className="kad-box">
+                      <div className="kad-lbl">Koopsom {k.datum ? new Date(k.datum).getFullYear() : '—'}</div>
+                      <div className="kad-val">{fmt(k.prijs)}</div>
+                      <div className="kad-sub">{k.datum ?? '—'}{k.opp ? ` · ${k.opp} m² perceel` : ''}</div>
+                    </div>
+                  ))}
+                </div>
+                {kad.laatste_koopsom && (
+                  <div className="note note-b" style={{ marginTop: 8 }}>
+                    💰 Laatste geregistreerde koopsom: <strong>{fmt(kad.laatste_koopsom)}</strong>
+                    {kad.laatste_koopsom_datum ? ` (${kad.laatste_koopsom_datum})` : ''}
+                  </div>
+                )}
+              </div>
+            )}
+
             {kad.is_split
-              ? <div className="note note-y">⚠️ Dit pand heeft {kad.vbo_count} geregistreerde eenheden — het is al gesplitst. Controleer eigendom en vergunningen zorgvuldig voor het bieden.</div>
+              ? <div className="note note-y" style={{ marginTop: 10 }}>⚠️ Dit pand heeft {kad.vbo_count} geregistreerde eenheden — het is al gesplitst. Controleer eigendom en vergunningen zorgvuldig voor het bieden.</div>
               : d.sqm >= 100
-                ? <div className="note note-b">💡 Enkelvoudige registratie. Bij {d.sqm}m² kan splitsing in 2 appartementen haalbaar zijn — check bestemmingsplan bij de gemeente.</div>
-                : <div className="note note-g">✓ Enkelvoudige registratie — geen splitsingscomplexiteit.</div>
+                ? <div className="note note-b" style={{ marginTop: 10 }}>💡 Enkelvoudige registratie. Bij {d.sqm}m² kan splitsing in 2 appartementen haalbaar zijn — check bestemmingsplan bij de gemeente.</div>
+                : <div className="note note-g" style={{ marginTop: 10 }}>✓ Enkelvoudige registratie — geen splitsingscomplexiteit.</div>
             }
             {kad.bag_id && <div className="note note-n" style={{ fontSize: 11, marginTop: 8 }}>BAG object-ID: <code>{kad.bag_id}</code></div>}
           </>
