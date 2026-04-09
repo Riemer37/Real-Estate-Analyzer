@@ -1,5 +1,5 @@
-// Stap 1/3 — Funda pagina ophalen (<8s)
-// Probeert eerst direct, valt terug op ScraperAPI met korte timeout
+// Stap 1/3 — Funda pagina ophalen (<9s)
+// Direct fetch eerst; als __NEXT_DATA__ ontbreekt, alsnog ScraperAPI met render=true
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
@@ -57,40 +57,61 @@ function extractStructured(html) {
   } catch { return null; }
 }
 
+function extractText(html) {
+  const $ = cheerio.load(html);
+  $('script, style, nav, footer, header, iframe').remove();
+  return $.text().split('\n').map(l => l.trim()).filter(l => l.length > 2).join('\n').slice(0, 4000);
+}
+
+async function fetchDirect(url) {
+  const { data } = await axios.get(url, {
+    timeout: 5000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'nl-NL,nl;q=0.9',
+    },
+  });
+  return data;
+}
+
+async function fetchScraperApi(url, render = false) {
+  const key = process.env.SCRAPER_API_KEY;
+  if (!key) throw new Error('Geen ScraperAPI key');
+  const scraperUrl = `http://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}&render=${render}&country_code=nl`;
+  const { data } = await axios.get(scraperUrl, { timeout: 9000 });
+  return data;
+}
+
 export async function POST(request) {
   try {
     const { url } = await request.json();
     let html = null;
+    let structured = null;
 
-    // Poging 1: direct ophalen (snel, ~1-3s)
+    // Poging 1: directe fetch
     try {
-      const { data } = await axios.get(url, {
-        timeout: 4000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'nl-NL,nl;q=0.9',
-        },
-      });
-      html = data;
-    } catch {
-      // Poging 2: ScraperAPI fallback (max 7s)
+      html = await fetchDirect(url);
+      structured = extractStructured(html);
+    } catch { /* valt terug */ }
+
+    // Poging 2: ScraperAPI render=false (als directe fetch geen __NEXT_DATA__ gaf)
+    if (!structured) {
       try {
-        const scraperUrl = `http://api.scraperapi.com?api_key=${process.env.SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&render=false`;
-        const { data } = await axios.get(scraperUrl, { timeout: 7000 });
-        html = data;
-      } catch { /* beide mislukt */ }
+        html = await fetchScraperApi(url, false);
+        structured = extractStructured(html);
+      } catch { /* valt terug */ }
     }
 
-    if (!html) {
-      return Response.json({ structured: null, text: '', ok: false, error: 'Pagina kon niet worden opgehaald' });
+    // Poging 3: ScraperAPI render=true (JS-rendering, als render=false ook faalt)
+    if (!structured) {
+      try {
+        html = await fetchScraperApi(url, true);
+        structured = extractStructured(html);
+      } catch { /* alle pogingen mislukt */ }
     }
 
-    const structured = extractStructured(html);
-
-    const $ = cheerio.load(html);
-    $('script, style, nav, footer, header, iframe').remove();
-    const text = $.text().split('\n').map(l => l.trim()).filter(l => l.length > 2).join('\n').slice(0, 4000);
+    const text = html ? extractText(html) : '';
 
     return Response.json({ structured, text, ok: true });
   } catch (e) {
