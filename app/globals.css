@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
+@import "tailwindcss";
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{background:#FAFAF8;font-family:'Inter',sans-serif;color:#1C1C1E;}
