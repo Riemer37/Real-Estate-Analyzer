@@ -16,6 +16,18 @@ const STEPS = ['Pagina ophalen', 'AI analyse uitvoeren', 'Kadaster & PDOK raadpl
 
 // ── Hulpfuncties ──────────────────────────────────────────────────────────────
 
+// Adres uit Funda-URL halen als AI niets vindt
+// Format: funda.nl/detail/koop/{city}/{type}-{straat}-{nr}/
+function extractAddressFromFundaUrl(url) {
+  try {
+    const m = url.match(/funda\.nl\/detail\/(?:koop|huur)\/([^/]+)\/(?:huis|appartement|woonhuis|studio|kamer|villa|boerderij|bungalow|penthouse|grondgebonden|overig|object)-(.+?)(?:\/|\?|$)/i);
+    if (!m) return null;
+    const city       = m[1].replace(/-/g, ' ');
+    const streetPart = m[2].replace(/-/g, ' ').trim();
+    return `${streetPart}, ${city}`;
+  } catch { return null; }
+}
+
 function getMedianPricePerM2(koopsommen) {
   const valid = (koopsommen ?? [])
     .filter(k => k.prijs && k.opp && k.opp > 20)
@@ -193,8 +205,10 @@ export default function Dashboard() {
 
       // ── Stap 3: Kadaster & PDOK ────────────────────────────────────────
       setStep(2);
-      const address = d.ADDRESS || structured?.address || (isUrl(trimmed) ? '' : trimmed);
-      if (!address) throw new Error('Kan geen adres bepalen uit de pagina. Probeer het adres direct in te voeren.');
+      const address = d.ADDRESS || structured?.address
+        || (isUrl(trimmed) ? extractAddressFromFundaUrl(trimmed) : null)
+        || (!isUrl(trimmed) ? trimmed : null);
+      if (!address) throw new Error('Kan geen adres bepalen. Probeer het adres direct in te voeren (bijv. "Keizersgracht 123, Amsterdam").');
 
       const kadRes = await fetch('/api/kadaster-data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
