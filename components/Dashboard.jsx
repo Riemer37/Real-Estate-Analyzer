@@ -1,9 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { fmt } from '@/lib/utils';
-import { berekenRenovatiekosten } from '@/lib/reno';
-import { berekenRisico }          from '@/lib/risico';
-import { berekenWWS }             from '@/lib/wws';
 import Overview     from './tabs/Overview';
 import Kadaster     from './tabs/Kadaster';
 import Potentieel   from './tabs/Potentieel';
@@ -12,115 +9,9 @@ import Renovation   from './tabs/Renovation';
 import ExitStrategy from './tabs/ExitStrategy';
 
 const TABS  = ['Overzicht', 'Kadaster', 'Potentieel', 'Aankoop', 'Renovatie', 'Exitstrategie'];
-const STEPS = ['Pagina ophalen', 'AI analyse uitvoeren', 'Kadaster & PDOK raadplegen'];
+const STEPS = ['Pagina ophalen', 'Woninggegevens extraheren', 'Kadaster PDOK raadplegen', 'Vergelijkbare verkopen analyseren', 'Investeringsmodel bouwen'];
 
 // ── Hulpfuncties ──────────────────────────────────────────────────────────────
-
-// Adres uit Funda-URL halen als AI niets vindt
-// Format: funda.nl/detail/koop/{city}/{type}-{straat}-{nr}/
-function extractAddressFromFundaUrl(url) {
-  try {
-    const m = url.match(/funda\.nl\/detail\/(?:koop|huur)\/([^/]+)\/(?:huis|appartement|woonhuis|studio|kamer|villa|boerderij|bungalow|penthouse|grondgebonden|overig|object)-(.+?)(?:\/|\?|$)/i);
-    if (!m) return null;
-    const city       = m[1].replace(/-/g, ' ');
-    const streetPart = m[2].replace(/-/g, ' ').trim();
-    return `${streetPart}, ${city}`;
-  } catch { return null; }
-}
-
-function getMedianPricePerM2(koopsommen) {
-  const valid = (koopsommen ?? [])
-    .filter(k => k.prijs && k.opp && k.opp > 20)
-    .map(k => k.prijs / k.opp);
-  if (!valid.length) return 0;
-  valid.sort((a, b) => a - b);
-  return valid[Math.floor(valid.length / 2)];
-}
-
-function buildResult({ url, d, kad, structured }) {
-  const price         = parseInt(d.PRICE)       || structured?.price   || 0;
-  const sqm           = kad?.official_sqm       || parseInt(d.SQM)     || structured?.sqm    || 85;
-  const year          = kad?.official_year      || parseInt(d.YEAR)    || structured?.year   || 1970;
-  const energy        = kad?.energy_label       || d.ENERGY            || structured?.energy || 'C';
-  const condition     = d.CONDITION             || 'Fair';
-  const property_type = d.PROPERTY_TYPE         || 'House';
-  const rooms         = parseInt(d.ROOMS)       || structured?.rooms   || 0;
-  const address       = kad?.official_address   || d.ADDRESS           || structured?.address || url;
-  const erfpacht      = d.ERFPACHT              || structured?.erfpacht|| 'Onbekend';
-  const inv_score     = parseInt(d.INVESTMENT_SCORE) || 5;
-  const h_margin      = parseInt(d.HEALTHY_MARGIN)   || 15;
-
-  // Marktwaarde: mediaan koopsommen → WOZ → vraagprijs
-  let fair_value = 0;
-  if (kad?.koopsommen?.length > 0 && sqm > 0) {
-    const med = getMedianPricePerM2(kad.koopsommen);
-    if (med > 0) fair_value = Math.round(med * sqm);
-  }
-  if (!fair_value && kad?.woz_huidig) fair_value = kad.woz_huidig;
-  if (!fair_value && price)           fair_value = price;
-
-  // Renovatiekosten (factbased)
-  const { kosten: reno_cost, items: reno_items } =
-    berekenRenovatiekosten({ sqm, condition, year, property_type, energy });
-
-  // Risicoscore (factbased)
-  const risicoResult = berekenRisico({
-    price, fair_value,
-    woz_huidig:  kad?.woz_huidig  || 0,
-    year, energy, condition, property_type, sqm,
-    erfpacht,
-  });
-
-  // Huurwaarde: WOZ×5%/12, gecapt door WWS max_huur
-  const wwsResult  = berekenWWS({ sqm, energy, woz_huidig: kad?.woz_huidig || 0 });
-  const woz_rent   = kad?.woz_huidig ? Math.round(kad.woz_huidig * 0.05 / 12) : 0;
-  let monthly_rent = woz_rent;
-  let huur_methode = 'WOZ×5%/12';
-  if (wwsResult.max_huur && woz_rent > wwsResult.max_huur) {
-    monthly_rent = wwsResult.max_huur;
-    huur_methode = `WWS max (${wwsResult.categorie})`;
-  }
-
-  // Vergelijkbare verkopen (van AI)
-  const comps = [1, 2, 3].map(i => ({
-    address: d[`COMP${i}_ADDRESS`] || null,
-    price:   parseInt(d[`COMP${i}_PRICE`]) || null,
-    sqm:     parseInt(d[`COMP${i}_SQM`])  || null,
-    year:    d[`COMP${i}_YEAR`]            || null,
-  })).filter(c => c.address);
-
-  return {
-    url,
-    address,
-    price,
-    sqm,
-    year,
-    energy,
-    condition,
-    property_type,
-    rooms,
-    erfpacht,
-    erfpacht_canon:    parseInt(d.ERFPACHT_CANON) || 0,
-    investment_score:  inv_score,
-    healthy_margin:    h_margin,
-    fair_value,
-    reno_cost,
-    reno_items,
-    monthly_rent,
-    huur_methode,
-    wws_categorie:     wwsResult.categorie,
-    wws_punten:        wwsResult.totaal,
-    wws_max_huur:      wwsResult.max_huur,
-    ...risicoResult,
-    summary:           d.SUMMARY       || '',
-    advice:            d.ADVICE        || '',
-    full_analysis:     d.FULL_ANALYSIS || '',
-    comps,
-    kadaster:          kad,
-    structured_source: structured ? 'funda_next_data' : 'ai_extraction',
-    potentieel:        null, // geen 4e API-call op Hobby plan
-  };
-}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -161,7 +52,7 @@ export default function Dashboard() {
     } catch {}
   }
 
-  // ── Analyse (3 stappen) ───────────────────────────────────────────────────
+  // ── Analyse ───────────────────────────────────────────────────────────────
   async function analyze() {
     if (!url) return;
     const trimmed = url.trim();
@@ -179,56 +70,25 @@ export default function Dashboard() {
     setLoading(true);
     setStep(0);
 
+    const isAddress = !isUrl(trimmed);
+    const endpoint  = isAddress ? '/api/address' : '/api/analyze';
+    const body      = isAddress ? { address: trimmed } : { url: trimmed };
+
+    const ticker = setInterval(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 700);
     try {
-      let d = {}, structured = null, text = '';
-
-      if (isUrl(trimmed)) {
-        // ── Stap 1: Pagina ophalen ─────────────────────────────────────────
-        setStep(0);
-        const scrapeRes = await fetch('/api/scrape', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: trimmed }),
-        });
-        const scrape = await scrapeRes.json();
-        structured = scrape.structured;
-        text       = scrape.text || '';
-
-        // ── Stap 2: AI analyse ─────────────────────────────────────────────
-        setStep(1);
-        const aiRes = await fetch('/api/ai', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, structured }),
-        });
-        const aiJson = await aiRes.json();
-        d = aiJson.d ?? {};
-      }
-
-      // ── Stap 3: Kadaster & PDOK ────────────────────────────────────────
-      setStep(2);
-      const address = d.ADDRESS || structured?.address
-        || (isUrl(trimmed) ? extractAddressFromFundaUrl(trimmed) : null)
-        || (!isUrl(trimmed) ? trimmed : null);
-      if (!address) throw new Error('Kan geen adres bepalen. Probeer het adres direct in te voeren (bijv. "Keizersgracht 123, Amsterdam").');
-
-      const kadRes = await fetch('/api/kadaster-data', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
-      });
-      const kad = await kadRes.json();
-
-      // ── Resultaat samenstellen ─────────────────────────────────────────
-      const result = buildResult({ url: trimmed, d, kad, structured });
-
-      setData(result);
-      setCached(trimmed, result);
-      setTotalAcq(result.price * 1.115);
-      setRenoState({ reno: result.reno_cost, uplift: result.reno_cost * 0.7, healthyMin: (result.price * 1.115 + result.reno_cost) * (result.healthy_margin / 100) });
+      const res  = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      clearInterval(ticker);
+      setData(json);
+      setCached(trimmed, json);
+      setTotalAcq(json.price * 1.115);
+      setRenoState({ reno: json.reno_cost, uplift: json.reno_cost * 0.7, healthyMin: (json.price * 1.115 + json.reno_cost) * (json.healthy_margin / 100) });
       setActiveTab(0);
-
     } catch (e) {
+      clearInterval(ticker);
       alert('Fout: ' + e.message);
     }
-
     setLoading(false);
   }
 
@@ -342,7 +202,7 @@ export default function Dashboard() {
                 <div className="prop-title">{data.address}</div>
                 <div className="prop-meta">
                   {data.property_type} &nbsp;·&nbsp; {data.sqm} m² &nbsp;·&nbsp; {data.rooms} kamers &nbsp;·&nbsp; Gebouwd {data.year} &nbsp;·&nbsp; <span className={`eb eb-${energy}`}>{energy}</span>
-                  {isUrl(data.url ?? '') && <>&nbsp;&nbsp;<a href={data.url} target="_blank" rel="noreferrer">Bekijk listing ↗</a></>}
+                  {data.url && isUrl(data.url) && <>&nbsp;&nbsp;<a href={data.url} target="_blank" rel="noreferrer">Bekijk listing ↗</a></>}
                   {kad.bag_viewer_url && <>&nbsp;·&nbsp;<a href={kad.bag_viewer_url} target="_blank" rel="noreferrer">Open in Kadaster ↗</a></>}
                 </div>
               </div>
