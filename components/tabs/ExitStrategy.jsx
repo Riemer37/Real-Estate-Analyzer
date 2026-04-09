@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { fmt } from '@/lib/utils';
 import { berekenWWS, WWS_SOCIAAL_GRENS, WWS_MIDDEN_GRENS } from '@/lib/wws';
+import { berekenBox3 } from '@/lib/box3'; // NIEUW
 
 export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) {
   const totalInvested = totalAcq + reno;
@@ -17,6 +18,11 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
   const [aanrechtCm,   setAanrecht]    = useState(200);
   const [toiletten,    setToiletten]   = useState(1);
   const [badkamers,    setBadkamers]   = useState(1);
+  // NIEUW: max bod calculator
+  const [desiredRoi,   setDesiredRoi]  = useState(15);
+  // NIEUW: Box 3 inputs
+  const [box3Hypo,     setBox3Hypo]    = useState(0);
+  const [box3Partners, setBox3Partners] = useState(1);
 
   // Sell
   const agent    = arv * 0.015;
@@ -25,6 +31,14 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
   const roi      = totalInvested ? net / totalInvested * 100 : 0;
   const marginOk = net >= healthyMin;
 
+  // NIEUW: Max bod berekening (omgekeerde ROI)
+  // totalInvested_max = arv * 0.98 / (1 + desiredRoi/100)
+  // bid_max = (totalInvested_max - reno - fixedCosts) / 1.115
+  const fixedAcqCosts  = 5100; // notaris + taxatie + keuring + overig (standaard)
+  const totalInvMax    = arv * 0.98 / (1 + desiredRoi / 100);
+  const maxBid         = Math.round((totalInvMax - reno - fixedAcqCosts) / 1.115);
+  const maxBidVsVraag  = maxBid - d.price;
+
   // Rent
   const effRent   = monthlyRent * 12 * (1 - vacancy / 100);
   const netAnnual = effRent - annualExp;
@@ -32,6 +46,12 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
   const netY      = postRenoVal ? netAnnual / postRenoVal * 100 : 0;
   const coc       = totalInvested ? netAnnual / totalInvested * 100 : 0;
   const payback   = netAnnual > 0 ? Math.floor(totalInvested / netAnnual) : 0;
+
+  // NIEUW: Box 3 belasting (verhuurscenario)
+  const woz      = d.kadaster?.woz_huidig ?? d.fair_value ?? 0;
+  const box3     = berekenBox3({ woz_huidig: woz, hypotheek: box3Hypo, partners: box3Partners });
+  const netAfterBox3 = netAnnual - box3.jaarlijkse_heffing;
+  const netYBox3     = postRenoVal ? netAfterBox3 / postRenoVal * 100 : 0;
 
   const cashflow = Array.from({ length: 10 }, (_, i) => ({
     year: i + 1,
@@ -63,6 +83,7 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
               <div className="kpi" key={lbl}><div className="kpi-l">{lbl}</div><div className={`kpi-v ${cls}`}>{val}</div></div>
             ))}
           </div>
+
           {net > 0 && (() => {
             const tw = totalAcq + reno + (agent + costs) + net;
             const wa = Math.max(Math.floor(totalAcq / tw * 100), 2);
@@ -70,7 +91,7 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
             const wc = Math.max(Math.floor((agent + costs) / tw * 100), 2);
             const wp = Math.max(100 - wa - wr - wc, 2);
             return (
-              <div style={{ marginTop: 16 }}>
+              <div style={{ marginTop: 4, marginBottom: 16 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>Winstopbouw</div>
                 <div className="wf">
                   <div className="ws" style={{ width: `${wa}%`, background: '#1D4ED8', color: '#fff' }}>Aankoop</div>
@@ -86,17 +107,46 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
               </div>
             );
           })()}
+
           {marginOk
-            ? <div className="note note-g" style={{ marginTop: 12 }}>Winst {fmt(net)} ({roi.toFixed(1)}% ROI) overstijgt de gezonde marge van {fmt(healthyMin)} ({d.healthy_margin}%)</div>
+            ? <div className="note note-g">Winst {fmt(net)} ({roi.toFixed(1)}% ROI) overstijgt de gezonde marge van {fmt(healthyMin)} ({d.healthy_margin}%)</div>
             : net > 0
-              ? <div className="note note-y" style={{ marginTop: 12 }}>Winstgevend maar onder de gezonde marge — verlaag bod of renovatieomvang.</div>
-              : <div className="note note-r" style={{ marginTop: 12 }}>Deal werkt niet bij deze parameters. Maximaal haalbaar bod: {fmt(arv - healthyMin - reno - (agent + costs))}</div>
+              ? <div className="note note-y">Winstgevend maar onder de gezonde marge — verlaag bod of renovatieomvang.</div>
+              : <div className="note note-r">Deal werkt niet bij deze parameters. Maximaal haalbaar bod: {fmt(arv - healthyMin - reno - (agent + costs))}</div>
           }
+
+          {/* NIEUW: Max bod calculator */}
+          <div style={{ background: '#FAFAF8', border: '1px solid #E4E4E7', borderRadius: 12, padding: '16px 20px', marginTop: 16 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 12 }}>Maximaal bod voor gewenste ROI</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#71717A' }}>Gewenste ROI ({desiredRoi}%)</label>
+                <input type="range" min={5} max={40} step={1} value={desiredRoi} onChange={e => setDesiredRoi(+e.target.value)} style={{ width: 200, display: 'block', marginTop: 6 }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Max. bod</div>
+                <div style={{ fontSize: 28, fontWeight: 600, color: maxBid > 0 ? '#1D4ED8' : '#B91C1C', letterSpacing: -1 }}>{maxBid > 0 ? fmt(maxBid) : 'Niet haalbaar'}</div>
+                {maxBid > 0 && (
+                  <div style={{ fontSize: 11, color: maxBidVsVraag < 0 ? '#15803D' : '#B45309', marginTop: 2 }}>
+                    {maxBidVsVraag < 0 ? `${fmt(Math.abs(maxBidVsVraag))} onder vraagprijs — onderhandelruimte aanwezig` : `${fmt(maxBidVsVraag)} boven vraagprijs — deal werkt op basis van ARV`}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ fontSize: 10, color: '#A1A1AA' }}>
+              Berekening: (ARV × 0,98 ÷ (1 + ROI%)) − renovatie − vaste kosten (€{fixedAcqCosts.toLocaleString('nl-NL')}) ÷ 1,115 (incl. 10,4% OVB)
+            </div>
+          </div>
         </>
       )}
 
       {tab === 'rent' && (
         <>
+          {d.huur_methode && (
+            <div className="note note-b" style={{ marginBottom: 12, fontSize: 11 }}>
+              Huurschatting berekend via <strong>{d.huur_methode}</strong> — pas aan indien afwijkt van markt.
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
               <label style={{ fontSize: 12, color: '#71717A' }}>Maandhuur (€)</label>
@@ -116,6 +166,38 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
               <div className="kpi" key={lbl}><div className="kpi-l">{lbl}</div><div className={`kpi-v ${cls}`}>{val}</div></div>
             ))}
           </div>
+
+          {/* NIEUW: Box 3 impact op verhuurrendement */}
+          <div style={{ background: '#FAFAF8', border: '1px solid #E4E4E7', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 12 }}>Box 3 belastingimpact op verhuurrendement</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, color: '#71717A' }}>Hypotheek (€)</label>
+                <input type="number" value={box3Hypo} step={10000} onChange={e => setBox3Hypo(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: '#71717A' }}>Fiscaal partners</label>
+                <select value={box3Partners} onChange={e => setBox3Partners(+e.target.value)} style={{ width: '100%', padding: '6px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3, background: '#fff' }}>
+                  <option value={1}>1 persoon</option>
+                  <option value={2}>2 partners</option>
+                </select>
+              </div>
+              <div className="kad-box">
+                <div className="kad-lbl">Box 3 heffing/jaar</div>
+                <div className="kad-val" style={{ color: '#B91C1C' }}>{fmt(box3.jaarlijkse_heffing)}</div>
+                <div className="kad-sub">{fmt(box3.maandelijks)}/mnd</div>
+              </div>
+              <div className="kad-box">
+                <div className="kad-lbl">Netto yield na belasting</div>
+                <div className="kad-val" style={{ color: netYBox3 > 3 ? '#15803D' : '#B45309' }}>{netYBox3.toFixed(1)}%</div>
+                <div className="kad-sub">Was {netY.toFixed(1)}% voor Box 3</div>
+              </div>
+            </div>
+            <div className="note note-n" style={{ fontSize: 11 }}>
+              WOZ {fmt(woz)} × {box3.rendement_pct}% fictief rendement × 36% = {fmt(box3.jaarlijkse_heffing)}/jaar · {box3.methode}
+            </div>
+          </div>
+
           <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>Cumulatieve cashflow over 10 jaar</div>
           <svg width="100%" height={chartH + 30} style={{ overflow: 'visible' }}>
             <polyline
@@ -132,26 +214,16 @@ export default function ExitStrategy({ d, totalAcq, reno, uplift, healthyMin }) 
           <div style={{ background: '#FAFAF8', border: '1px solid #E4E4E7', borderRadius: 12, padding: '16px 20px', marginTop: 16 }}>
             <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 12 }}>WWS-puntentelling — verfijn de berekening</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 11, color: '#71717A' }}>Buitenruimte (m²)</label>
-                <input type="number" value={buitenruimte} min={0} step={1} onChange={e => setBuiten(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: '#71717A' }}>Aanrecht (cm)</label>
-                <input type="number" value={aanrechtCm} min={60} step={30} onChange={e => setAanrecht(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: '#71717A' }}>Toiletten</label>
-                <input type="number" value={toiletten} min={1} max={4} onChange={e => setToiletten(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: '#71717A' }}>Badkamers</label>
-                <input type="number" value={badkamers} min={1} max={4} onChange={e => setBadkamers(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
-              </div>
+              {[['Buitenruimte (m²)', buitenruimte, setBuiten, 0, 1], ['Aanrecht (cm)', aanrechtCm, setAanrecht, 60, 30], ['Toiletten', toiletten, setToiletten, 1, 1], ['Badkamers', badkamers, setBadkamers, 1, 1]].map(([lbl, val, set, min, step]) => (
+                <div key={lbl}>
+                  <label style={{ fontSize: 11, color: '#71717A' }}>{lbl}</label>
+                  <input type="number" value={val} min={min} step={step} onChange={e => set(+e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 12, marginTop: 3 }} />
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* WWS invoer + puntentelling */}
+          {/* WWS puntentelling */}
           {(() => {
             const wws = berekenWWS({ sqm: d.sqm, energy: d.energy, woz_huidig: d.kadaster?.woz_huidig ?? 0, buitenruimte, aanrecht_cm: aanrechtCm, toiletten, badkamers });
             const barPct = Math.min(Math.round((wws.totaal / 250) * 100), 100);

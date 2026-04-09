@@ -88,3 +88,17 @@ html,body{background:#FAFAF8;font-family:'Inter',sans-serif;color:#1C1C1E;}
 .score-wrap{text-align:right;flex-shrink:0;margin-left:20px;}
 .score-num{font-size:36px;font-weight:600;letter-spacing:-1.5px;line-height:1;}
 .score-lbl{font-size:10px;font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:.06em;}
+
+/* ── NIEUW: Print / PDF export stijlen ────────────────────────────────────── */
+@media print {
+  aside { display: none !important; }
+  main  { margin-left: 0 !important; padding: 16px !important; }
+  button, input[type="range"] { display: none !important; }
+  .hero, .feat-row, .pill-row { display: none !important; }
+  .card  { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; }
+  .note  { break-inside: avoid; }
+  a      { color: inherit !important; text-decoration: none !important; }
+  body   { background: #fff !important; font-size: 11px; }
+  .kpi   { border: 1px solid #eee !important; }
+  .prop-bar { border: 1px solid #ccc !important; }
+}

@@ -12,6 +12,14 @@ export default function Kadaster({ d }) {
 
   return (
     <>
+      {d.structured_source && (
+        <div className="note note-g" style={{ marginBottom: 12, fontSize: 11 }}>
+          Gestructureerde Funda-data direct uitgelezen (geen AI-parsing):&nbsp;
+          {Object.entries(d.structured_source)
+            .filter(([k]) => k !== 'erfpacht')
+            .map(([k, v]) => <span key={k} style={{ marginRight: 10 }}><strong>{k}</strong>: {String(v)}</span>)}
+        </div>
+      )}
       <div className="card">
         <div className="card-title">Officiële Kadaster BAG-gegevens &nbsp; {bagLink}</div>
         {kad.found ? (

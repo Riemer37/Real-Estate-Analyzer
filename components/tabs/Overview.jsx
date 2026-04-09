@@ -11,13 +11,13 @@ export default function Overview({ d }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
     {pv && (
-      <div style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+      <div style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10 }}>
         <div>
-          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Marktwaarde methode</div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Methode</div>
           <div style={{ fontSize: 12, fontWeight: 600, color: '#1C1C1E' }}>{pv.waarde_methode}</div>
         </div>
         <div>
-          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Statistisch (comps)</div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Marktwaarde</div>
           <div style={{ fontSize: 12, fontWeight: 600, color: '#1C1C1E' }}>{fmt(pv.stat_fair_value)}</div>
         </div>
         <div>
@@ -25,8 +25,17 @@ export default function Overview({ d }) {
           <div style={{ fontSize: 12, fontWeight: 600, color: '#71717A' }}>{fmt(pv.ai_fair_value)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Afwijking</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: pv.betrouwbaar ? '#15803D' : '#B45309' }}>{pv.afwijking_pct}% {pv.betrouwbaar ? '— betrouwbaar' : '— let op'}</div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>Databronnen</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#1C1C1E' }}>
+            {(pv.kad_comps_count ?? 0) > 0 && <span style={{ color: '#15803D' }}>{pv.kad_comps_count}× Kadaster</span>}
+            {(pv.kad_comps_count ?? 0) > 0 && (pv.ai_comps_count ?? 0) > 0 && <span style={{ color: '#A1A1AA' }}> + </span>}
+            {(pv.ai_comps_count ?? 0) > 0 && <span style={{ color: '#71717A' }}>{pv.ai_comps_count}× AI</span>}
+            {!(pv.kad_comps_count) && !(pv.ai_comps_count) && '—'}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 4 }}>AI afwijking</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: pv.betrouwbaar ? '#15803D' : '#B45309' }}>{pv.afwijking_pct}% {pv.betrouwbaar ? '— klopt' : '— let op'}</div>
         </div>
       </div>
     )}
@@ -40,7 +49,13 @@ export default function Overview({ d }) {
         <div className="card-title">Investeringsthese</div>
         <div style={{ fontSize: 13.5, color: '#3F3F46', lineHeight: 1.85, marginBottom: 14 }}>{d.full_analysis}</div>
         <div className="note note-b">{d.advice}</div>
-        {[['Staat', d.condition], ['Renovatiescope', d.reno_items], ['Geanalyseerd', d.saved_at ?? '—']].map(([k, v]) => (
+        {[
+          ['Staat', d.condition],
+          ['Renovatiescope', d.reno_items],
+          ['Huurwaarde bron', d.huur_methode ?? '—'],
+          ['WWS categorie', d.wws_categorie ? `${d.wws_categorie} (${d.wws_punten} pt)` : '—'],
+          ['Geanalyseerd', d.saved_at ?? '—'],
+        ].map(([k, v]) => (
           <div className="row" key={k}><span className="rk">{k}</span><span className="rv">{v}</span></div>
         ))}
       </div>
@@ -74,6 +89,7 @@ export default function Overview({ d }) {
           );
         })}
         {d.risk_notes && <div className="note note-y" style={{ fontSize: 12, marginTop: 4 }}>{d.risk_notes}</div>}
+        <div style={{ fontSize: 10, color: '#A1A1AA', marginTop: 8 }}>Berekend op basis van WOZ-ratio, bouwjaar, energielabel, staat en vraagprijs vs. marktwaarde</div>
       </div>
     </div>
     </div>

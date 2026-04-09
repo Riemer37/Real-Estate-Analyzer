@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "app/api/scrape/route.js":       { "maxDuration": 10 },
+    "app/api/ai/route.js":           { "maxDuration": 10 },
+    "app/api/kadaster-data/route.js":{ "maxDuration": 10 },
+    "app/api/analyze/route.js":      { "maxDuration": 300 },
+    "app/api/address/route.js":      { "maxDuration": 60 }
+  }
+}
