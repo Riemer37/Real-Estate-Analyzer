@@ -267,10 +267,71 @@ async function lookupKadasterFast(address) {
   return res;
 }
 
+// ── Transformatiepotentieel ───────────────────────────────────────────────────
+function berekenPotentieel({ sqm, property_type, year, kad, erfpacht }) {
+  const isApartment = property_type === 'Apartment';
+  const isHouse     = property_type === 'House' || property_type === 'Townhouse';
+  const isMonument  = kad.is_rijksmonument || kad.is_beschermd_gezicht;
+  const alGesplitst = kad.is_split;
+
+  // Splitsen
+  let ss, st;
+  if (alGesplitst) { ss = 2; st = 'Pand is al gesplitst. Verdere splitsing afhankelijk van vergunning en bestemmingsplan.'; }
+  else if (sqm >= 120 && isHouse) { ss = 8; st = `Met ${sqm}m² is splitsing in 2 appartementen goed haalbaar. Check bestemmingsplan bij gemeente.`; }
+  else if (sqm >= 100) { ss = 6; st = `Bij ${sqm}m² is splitsing mogelijk haalbaar, afhankelijk van indeling en bestemmingsplan.`; }
+  else if (sqm >= 80)  { ss = 4; st = `Bij ${sqm}m² is splitsing lastig maar niet uitgesloten. Raadpleeg een architect.`; }
+  else { ss = 2; st = `Bij ${sqm}m² is splitsing in zelfstandige eenheden praktisch niet haalbaar.`; }
+  if (isMonument) { ss = Math.min(ss, 3); st += ' Monument: extra vergunningsprocedures vereist.'; }
+
+  // Optoppen
+  let os, ot;
+  if (isApartment) { os = 2; ot = 'Optoppen bij een appartement is afhankelijk van de VvE en het bestemmingsplan van het gehele pand.'; }
+  else if (isHouse && year < 1960) { os = 4; ot = `Ouder pand (${year}) — constructief onderzoek nodig voor optoppen.`; }
+  else if (isHouse) { os = 6; ot = 'Optoppen van vrijstaand/twee-onder-een-kap is technisch haalbaar. Nokhoogte en vergunning zijn bepalend.'; }
+  else { os = 4; ot = 'Haalbaarheid afhankelijk van constructie, burenrecht en gemeentelijk beleid.'; }
+  if (isMonument) { os = 1; ot = 'Monument of beschermd gezicht — optoppen vrijwel onmogelijk.'; }
+
+  // Balkon
+  let bs, bt;
+  if (isApartment && year >= 1960 && year < 1990) { bs = 7; bt = 'Balkon toevoegen aan naoorlogse flat is gangbaar. Vergunning en VvE-akkoord vereist.'; }
+  else if (isApartment) { bs = 5; bt = 'Balkon toevoegen vereist VvE-akkoord en omgevingsvergunning. Haalbaarheid afhankelijk van gevelconstructie.'; }
+  else if (isHouse) { bs = 6; bt = 'Dakkapel of balkon aan achterkant is bij veel woningen vergunningsvrij. Voorzijde vereist welstandsadvies.'; }
+  else { bs = 5; bt = 'Afhankelijk van gevel en bestemmingsplan.'; }
+  if (isMonument) { bs = 2; bt = 'Monument: uitwendige wijzigingen vereisen toestemming van gemeente en RCE.'; }
+
+  // Aanbouw
+  let as2, at2;
+  if (isApartment) { as2 = 2; at2 = 'Aanbouw bij een appartement is praktisch niet mogelijk.'; }
+  else if (isHouse && sqm >= 100) { as2 = 7; at2 = 'Aanbouw of uitbouw is bij grotere woningen goed haalbaar. Check bouwvlak in bestemmingsplan.'; }
+  else if (isHouse) { as2 = 6; at2 = 'Kleine aanbouw of dakkapel is veelal vergunningsvrij (max. 4m diep). Raadpleeg het bestemmingsplan.'; }
+  else { as2 = 5; at2 = 'Afhankelijk van perceel en bestemmingsplan.'; }
+  if (erfpacht === 'Ja') { as2 = Math.max(1, as2 - 2); at2 += ' Let op erfpacht: aanbouw vereist toestemming erfverpachter.'; }
+
+  const best = Math.max(ss, os, bs, as2);
+  const advies = best >= 7
+    ? 'Dit object biedt goede transformatiemogelijkheden. Raadpleeg een architect en de gemeente voor de exacte mogelijkheden.'
+    : best >= 4
+    ? 'Er zijn beperkte transformatiemogelijkheden. Kleine verbeteringen zoals aanbouw of dakkapel bieden de meeste kans.'
+    : 'De transformatiemogelijkheden zijn beperkt. Focus op renovatie van de bestaande woonruimte voor waardestijging.';
+
+  return {
+    gemeente_strictheid: isMonument ? 'Streng' : 'Gemiddeld',
+    gemeente_beleid: isMonument
+      ? 'Monument of beschermd gezicht: voor alle uitwendige wijzigingen is een omgevingsvergunning vereist. Doorlooptijd 8-26 weken.'
+      : 'Transformaties zijn in de meeste gemeenten mogelijk mits passend binnen het bestemmingsplan. Informeer bij de gemeente.',
+    bestemmingsplan_type: alGesplitst ? 'Wonen — meergezinswoningen' : isApartment ? 'Wonen — appartement' : 'Wonen — grondgebonden',
+    optoppen: { score: os, toelichting: ot },
+    splitsen:  { score: ss, toelichting: st },
+    balkon:    { score: bs, toelichting: bt },
+    aanbouw:   { score: as2, toelichting: at2 },
+    advies,
+  };
+}
+
 // ── Hoofd-handler ─────────────────────────────────────────────────────────────
 export async function POST(request) {
   try {
-    const { url, manualPrice } = await request.json();
+    const { url } = await request.json();
 
     // Adres uit URL halen voor vroege Kadaster-start (Funda-URLs bevatten het adres)
     const quickAddress = urlToAddress(url);
@@ -287,8 +348,8 @@ export async function POST(request) {
     const bestAddress = structured?.address || quickAddress;
 
     // ── PARALLEL FASE 2: AI analyse + Kadaster verfijnen (indien nodig) ────────
-    const knownFacts = (structured || manualPrice) ? [
-      (manualPrice || structured?.price) ? `KNOWN_PRICE: ${manualPrice || structured.price}` : null,
+    const knownFacts = structured ? [
+      structured?.price  ? `KNOWN_PRICE: ${structured.price}`   : null,
       structured.sqm     ? `KNOWN_SQM: ${structured.sqm}`       : null,
       structured.year    ? `KNOWN_YEAR: ${structured.year}`      : null,
       structured.energy  ? `KNOWN_ENERGY: ${structured.energy}`  : null,
@@ -346,7 +407,7 @@ FULL_ANALYSIS: [5 sentences — acquisition, renovation, exit, risks, verdict]`,
     }
 
     // ── Data samenvoegen ──────────────────────────────────────────────────────
-    const price         = manualPrice || structured?.price || pn(d.PRICE, 0);
+    const price         = structured?.price || pn(d.PRICE, 0);
     const sqm_ai        = structured?.sqm     ?? pn(d.SQM, 85);
     const year_ai       = structured?.year    ?? pn(d.YEAR, 1970);
     const energy_raw    = ((kad.energy_label ?? structured?.energy ?? d.ENERGY ?? 'C')).trim().toUpperCase().slice(0, 2);
@@ -420,7 +481,7 @@ FULL_ANALYSIS: [5 sentences — acquisition, renovation, exit, risks, verdict]`,
       advice:           d.ADVICE        ?? '',
       full_analysis:    d.FULL_ANALYSIS ?? '',
       kadaster:         kad,
-      potentieel:       null,
+      potentieel:       berekenPotentieel({ sqm, property_type, year, kad, erfpacht }),
       structured_source: structured ? 'funda_next_data' : (quickAddress ? 'url_parse' : 'ai_only'),
       saved_at: new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' }),
     });

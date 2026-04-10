@@ -44,7 +44,7 @@ export default function Potentieel({ d }) {
     return (
       <div className="card">
         <div className="card-title">Transformatiepotentieel</div>
-        <div className="note note-n">Transformatieanalyse is alleen beschikbaar bij invoer via URL. Voer een Funda- of Pararius-link in voor een volledige analyse.</div>
+        <div className="note note-n">Transformatiedata kon niet worden berekend. Analyseer opnieuw voor een volledig resultaat.</div>
       </div>
     );
   }
