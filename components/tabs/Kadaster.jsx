@@ -14,10 +14,11 @@ export default function Kadaster({ d }) {
     <>
       {d.structured_source && (
         <div className="note note-g" style={{ marginBottom: 12, fontSize: 11 }}>
-          Gestructureerde Funda-data direct uitgelezen (geen AI-parsing):&nbsp;
-          {Object.entries(d.structured_source)
-            .filter(([k]) => k !== 'erfpacht')
-            .map(([k, v]) => <span key={k} style={{ marginRight: 10 }}><strong>{k}</strong>: {String(v)}</span>)}
+          {typeof d.structured_source === 'object'
+            ? <>Gestructureerde Funda-data direct uitgelezen:&nbsp;
+                {Object.entries(d.structured_source).filter(([k]) => k !== 'erfpacht').map(([k, v]) =>
+                  <span key={k} style={{ marginRight: 10 }}><strong>{k}</strong>: {String(v)}</span>)}</>
+            : `Databron: ${d.structured_source}`}
         </div>
       )}
       <div className="card">

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { fmt } from '@/lib/utils';
 
 export default function Renovation({ d, totalAcq, onUpdate }) {
@@ -9,7 +9,7 @@ export default function Renovation({ d, totalAcq, onUpdate }) {
   const healthyMin = (totalAcq + reno) * (d.healthy_margin / 100);
   const postReno   = d.fair_value + uplift;
 
-  onUpdate?.({ reno, uplift, healthyMin });
+  useEffect(() => { onUpdate?.({ reno, uplift, healthyMin }); }, [reno, totalAcq]);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

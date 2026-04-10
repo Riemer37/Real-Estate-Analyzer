@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { fmt } from '@/lib/utils';
 import { berekenBox3 } from '@/lib/box3';
 
@@ -19,7 +19,7 @@ export default function Acquisition({ d, onUpdate }) {
   const totalAcq = bid + tax + notary + taxatie + keuring + misc;
   const diffFmv  = d.price - d.fair_value;
 
-  onUpdate?.(totalAcq);
+  useEffect(() => { onUpdate?.(totalAcq); }, [totalAcq]);
 
   const erfpacht = d.erfpacht ?? 'Onbekend';
   const canon    = d.erfpacht_canon ?? 0;
