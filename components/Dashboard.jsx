@@ -16,16 +16,14 @@ const STEPS = ['Pagina ophalen', 'Woninggegevens extraheren', 'Kadaster PDOK raa
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [url,           setUrl]           = useState('');
-  const [manualPrice,   setManualPrice]   = useState('');
-  const [loading,       setLoading]       = useState(false);
-  const [step,          setStep]          = useState(0);
-  const [data,          setData]          = useState(null);
-  const [priceOverride, setPriceOverride] = useState(null);
-  const [saved,         setSaved]         = useState([]);
-  const [activeTab,     setActiveTab]     = useState(0);
-  const [totalAcq,      setTotalAcq]      = useState(null);
-  const [renoState,     setRenoState]     = useState(null);
+  const [url,       setUrl]       = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [step,      setStep]      = useState(0);
+  const [data,      setData]      = useState(null);
+  const [saved,     setSaved]     = useState([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [totalAcq,  setTotalAcq]  = useState(null);
+  const [renoState, setRenoState] = useState(null);
 
   useEffect(() => {
     try { setSaved(JSON.parse(localStorage.getItem('saved_properties') ?? '[]')); } catch {}
@@ -72,11 +70,9 @@ export default function Dashboard() {
     setLoading(true);
     setStep(0);
 
-    setPriceOverride(null);
     const isAddress = !isUrl(trimmed);
     const endpoint  = isAddress ? '/api/address' : '/api/analyze';
-    const mp        = parseInt(manualPrice.replace(/\D/g, '')) || 0;
-    const body      = isAddress ? { address: trimmed } : { url: trimmed, manualPrice: mp };
+    const body      = isAddress ? { address: trimmed } : { url: trimmed };
 
     const ticker = setInterval(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 700);
     try {
@@ -113,7 +109,6 @@ export default function Dashboard() {
     setSaved(list);
   }
 
-  const effectivePrice = priceOverride ?? data?.price ?? 0;
   const sc      = data?.investment_score ?? 5;
   const scCol   = sc >= 7 ? '#15803D' : sc >= 5 ? '#B45309' : '#B91C1C';
   const scLabel = sc >= 7 ? 'Sterke koop' : sc >= 5 ? 'Voorwaardelijk' : 'Vermijden';
@@ -137,13 +132,6 @@ export default function Dashboard() {
           onKeyDown={e => e.key === 'Enter' && analyze()}
           placeholder="URL of adres (bijv. Hoofdstraat 1, Amsterdam)…"
           style={{ width: '100%', padding: '8px 10px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, marginBottom: 6, outline: 'none' }}
-        />
-        <input
-          value={manualPrice}
-          onChange={e => setManualPrice(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && analyze()}
-          placeholder="Vraagprijs € (optioneel)"
-          style={{ width: '100%', padding: '8px 10px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, marginBottom: 8, outline: 'none' }}
         />
         <button onClick={analyze} style={{ width: '100%', padding: '8px 12px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, cursor: 'pointer' }}>
           Woning analyseren →
@@ -229,28 +217,15 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Prijs ontbreekt waarschuwing */}
-            {!effectivePrice && (
-              <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 10, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, color: '#92400E' }}>Vraagprijs niet gevonden — vul in:</span>
-                <input
-                  type="number" placeholder="bijv. 325000" step={5000}
-                  onChange={e => { const v = parseInt(e.target.value); if (v > 0) setPriceOverride(v); }}
-                  style={{ padding: '5px 8px', border: '1px solid #FCD34D', borderRadius: 6, fontSize: 13, width: 140 }}
-                  autoFocus
-                />
-              </div>
-            )}
-
             {/* KPI strip */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 14 }}>
               {[
-                ['Vraagprijs',   fmt(effectivePrice),            fmt(Math.floor(effectivePrice / Math.max(data.sqm, 1))) + '/m²',                                                                     'blue'],
-                ['Marktwaarde',  fmt(data.fair_value),           data.fair_value > effectivePrice ? 'Boven vraagprijs' : 'Onder vraagprijs',                                                          data.fair_value > effectivePrice ? 'green' : 'amber'],
-                ['Renovatie',    fmt(data.reno_cost),            'Waardestijging ≈ +' + fmt(data.reno_cost * 0.7),                                                                                    'amber'],
-                ['Markthuur',    fmt(data.monthly_rent) + '/mnd', 'Rendement ' + (data.monthly_rent * 12 / Math.max(data.fair_value + data.reno_cost * 0.7, 1) * 100).toFixed(1) + '%',              'green'],
-                ['Risicoscore',  data.risk_score + '/10',        data.risk_score <= 3 ? 'Laag' : data.risk_score <= 6 ? 'Gemiddeld' : 'Hoog risico',                                                 data.risk_score <= 3 ? 'green' : data.risk_score <= 6 ? 'amber' : 'red'],
-                ['Min. marge',   data.healthy_margin + '%',      'Min. ' + fmt((effectivePrice + data.reno_cost) * data.healthy_margin / 100),                                                        'purple'],
+                ['Vraagprijs',   fmt(data.price),            fmt(Math.floor(data.price / Math.max(data.sqm, 1))) + '/m²',                                                           'blue'],
+                ['Marktwaarde',  fmt(data.fair_value),       data.fair_value > data.price ? 'Boven vraagprijs' : 'Onder vraagprijs',                                                data.fair_value > data.price ? 'green' : 'amber'],
+                ['Renovatie',    fmt(data.reno_cost),        'Waardestijging ≈ +' + fmt(data.reno_cost * 0.7),                                                                      'amber'],
+                ['Markthuur',    fmt(data.monthly_rent) + '/mnd', 'Rendement ' + (data.monthly_rent * 12 / Math.max(data.fair_value + data.reno_cost * 0.7, 1) * 100).toFixed(1) + '%', 'green'],
+                ['Risicoscore',  data.risk_score + '/10',   data.risk_score <= 3 ? 'Laag' : data.risk_score <= 6 ? 'Gemiddeld' : 'Hoog risico',                                   data.risk_score <= 3 ? 'green' : data.risk_score <= 6 ? 'amber' : 'red'],
+                ['Min. marge',   data.healthy_margin + '%', 'Min. ' + fmt((data.price + data.reno_cost) * data.healthy_margin / 100),                                               'purple'],
               ].map(([lbl, val, hint, cls]) => (
                 <div className="kpi" key={lbl}><div className="kpi-l">{lbl}</div><div className={`kpi-v ${cls}`}>{val}</div><div className="kpi-s">{hint}</div></div>
               ))}
