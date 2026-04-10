@@ -270,7 +270,7 @@ async function lookupKadasterFast(address) {
 // ── Hoofd-handler ─────────────────────────────────────────────────────────────
 export async function POST(request) {
   try {
-    const { url } = await request.json();
+    const { url, manualPrice } = await request.json();
 
     // Adres uit URL halen voor vroege Kadaster-start (Funda-URLs bevatten het adres)
     const quickAddress = urlToAddress(url);
@@ -287,8 +287,8 @@ export async function POST(request) {
     const bestAddress = structured?.address || quickAddress;
 
     // ── PARALLEL FASE 2: AI analyse + Kadaster verfijnen (indien nodig) ────────
-    const knownFacts = structured ? [
-      structured.price   ? `KNOWN_PRICE: ${structured.price}`   : null,
+    const knownFacts = (structured || manualPrice) ? [
+      (manualPrice || structured?.price) ? `KNOWN_PRICE: ${manualPrice || structured.price}` : null,
       structured.sqm     ? `KNOWN_SQM: ${structured.sqm}`       : null,
       structured.year    ? `KNOWN_YEAR: ${structured.year}`      : null,
       structured.energy  ? `KNOWN_ENERGY: ${structured.energy}`  : null,
@@ -346,7 +346,7 @@ FULL_ANALYSIS: [5 sentences — acquisition, renovation, exit, risks, verdict]`,
     }
 
     // ── Data samenvoegen ──────────────────────────────────────────────────────
-    const price         = structured?.price   ?? pn(d.PRICE, 250000);
+    const price         = manualPrice || structured?.price || pn(d.PRICE, 0);
     const sqm_ai        = structured?.sqm     ?? pn(d.SQM, 85);
     const year_ai       = structured?.year    ?? pn(d.YEAR, 1970);
     const energy_raw    = ((kad.energy_label ?? structured?.energy ?? d.ENERGY ?? 'C')).trim().toUpperCase().slice(0, 2);
