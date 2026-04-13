@@ -174,7 +174,7 @@ async function lookupKadasterFast(address) {
   const bagId = res.bag_id ? res.bag_id.replace(/\D/g, '').padStart(16, '0') : null;
   const epKey = process.env.EP_ONLINE_API_KEY;
 
-  const [bagVbo, wozData, epData, rcePoints, rcePolygons] = await Promise.all([
+  const [bagVbo, wozData, epData, rcePoints, rcePolygons, perceelData] = await Promise.all([
     bagId ? pFetch(
       `https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=2.0.0&request=GetFeature&typeName=bag:verblijfsobject&outputFormat=application/json&count=1&filter=` +
       encodeURIComponent(`<Filter><PropertyIsEqualTo><PropertyName>identificatie</PropertyName><Literal>${bagId}</Literal></PropertyIsEqualTo></Filter>`)
@@ -199,6 +199,14 @@ async function lookupKadasterFast(address) {
     res.lat && res.lon ? pFetch(
       `https://api.pdok.nl/rce/beschermde-gebieden-cultuurhistorie/ogc/v1/collections/rce_inspire_polygons/items` +
       `?bbox=${res.lon - 0.0001},${res.lat - 0.0001},${res.lon + 0.0001},${res.lat + 0.0001}&limit=5`
+    ) : Promise.resolve(null),
+
+    // Kadastrale Kaart WFS — perceeloppervlakte
+    res.lat && res.lon ? pFetch(
+      `https://service.pdok.nl/kadaster/kadastralekaart/wfs/v5_0?service=WFS&version=2.0.0&request=GetFeature` +
+      `&typeName=kadastralekaart:perceel&outputFormat=application/json&count=3` +
+      `&bbox=${res.lon - 0.00015},${res.lat - 0.00015},${res.lon + 0.00015},${res.lat + 0.00015}`,
+      5000
     ) : Promise.resolve(null),
   ]);
 
@@ -278,11 +286,28 @@ async function lookupKadasterFast(address) {
     }
   }
 
+  // Perceeloppervlakte (kadastrale kaart)
+  if (perceelData?.features?.length > 0) {
+    // Grootste perceel uit de bbox-resultaten (bij gesplitst pand kunnen er meerdere zijn)
+    const areas = perceelData.features
+      .map(f => f.properties?.kadastralegrootte ?? null)
+      .filter(a => typeof a === 'number' && a > 0);
+    if (areas.length > 0) {
+      res.perceel_oppervlakte = Math.max(...areas);
+    }
+    const first = perceelData.features[0]?.properties;
+    if (first) {
+      res.perceel_nummer    = first.perceelnummer  ?? null;
+      res.perceel_sectie    = first.sectie         ?? null;
+      res.perceel_gemeente  = first.kadastralegemeentenaam ?? null;
+    }
+  }
+
   return res;
 }
 
 // ── Transformatiepotentieel ───────────────────────────────────────────────────
-function berekenPotentieel({ sqm, property_type, year, kad, erfpacht }) {
+function berekenPotentieel({ sqm, property_type, year, kad, erfpacht, perceel }) {
   const isApartment = property_type === 'Apartment';
   const isHouse     = property_type === 'House' || property_type === 'Townhouse';
   const isMonument  = kad.is_rijksmonument || kad.is_beschermd_gezicht;
@@ -316,6 +341,9 @@ function berekenPotentieel({ sqm, property_type, year, kad, erfpacht }) {
   // Aanbouw
   let as2, at2;
   if (isApartment) { as2 = 2; at2 = 'Aanbouw bij een appartement is praktisch niet mogelijk.'; }
+  else if (isHouse && perceel >= 200) { as2 = 8; at2 = `Groot perceel (${perceel}m²) biedt ruim voldoende ruimte voor aanbouw of uitbouw. Check bouwvlak in bestemmingsplan.`; }
+  else if (isHouse && perceel >= 100) { as2 = 7; at2 = `Perceel van ${perceel}m² — aanbouw of uitbouw goed haalbaar. Raadpleeg het bestemmingsplan.`; }
+  else if (isHouse && perceel > 0)    { as2 = 5; at2 = `Perceel van ${perceel}m² — kleine aanbouw (max. 4m diep) veelal vergunningsvrij. Check beschikbare ruimte.`; }
   else if (isHouse && sqm >= 100) { as2 = 7; at2 = 'Aanbouw of uitbouw is bij grotere woningen goed haalbaar. Check bouwvlak in bestemmingsplan.'; }
   else if (isHouse) { as2 = 6; at2 = 'Kleine aanbouw of dakkapel is veelal vergunningsvrij (max. 4m diep). Raadpleeg het bestemmingsplan.'; }
   else { as2 = 5; at2 = 'Afhankelijk van perceel en bestemmingsplan.'; }
@@ -370,8 +398,9 @@ export async function POST(request) {
       earlyKad.official_sqm  ? `KNOWN_SQM: ${earlyKad.official_sqm}`     : null,
       earlyKad.official_year ? `KNOWN_YEAR: ${earlyKad.official_year}`    : null,
       earlyKad.woz_huidig    ? `KNOWN_WOZ: ${earlyKad.woz_huidig}`       : null,
-      earlyKad.energy_label  ? `KNOWN_ENERGY: ${earlyKad.energy_label}`  : null,
-      earlyKad.official_address ? `KNOWN_ADDRESS: ${earlyKad.official_address}` : null,
+      earlyKad.energy_label       ? `KNOWN_ENERGY: ${earlyKad.energy_label}`             : null,
+      earlyKad.official_address   ? `KNOWN_ADDRESS: ${earlyKad.official_address}`         : null,
+      earlyKad.perceel_oppervlakte ? `KNOWN_PERCEEL: ${earlyKad.perceel_oppervlakte}`     : null,
     ].filter(Boolean).join('\n') : '';
 
     const knownFacts = structured ? [
@@ -507,7 +536,7 @@ FULL_ANALYSIS: [5 sentences — acquisition, renovation, exit, risks, verdict]`,
       advice:           d.ADVICE        ?? '',
       full_analysis:    d.FULL_ANALYSIS ?? '',
       kadaster:         kad,
-      potentieel:       berekenPotentieel({ sqm, property_type, year, kad, erfpacht }),
+      potentieel:       berekenPotentieel({ sqm, property_type, year, kad, erfpacht, perceel: kad.perceel_oppervlakte ?? 0 }),
       structured_source: structured ? 'funda_next_data' : (isAddressMode ? 'address_kadaster' : (quickAddress ? 'url_parse' : 'ai_only')),
       saved_at: new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' }),
     });

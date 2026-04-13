@@ -55,7 +55,8 @@ export default function Kadaster({ d }) {
             <div className="kad-grid">
               {[
                 ['Officieel adres',       kad.official_address ?? '—',                                         '',     'Via PDOK Locatieserver'],
-                ['Geregistreerde opp.',   kad.official_sqm ? `${kad.official_sqm} m²` : '—',                  '',     'Uit BAG verblijfsobject'],
+                ['Geregistreerde opp.',   kad.official_sqm ? `${kad.official_sqm} m²` : '—',                  '',     'Woonoppervlakte (BAG)'],
+                ['Perceeloppervlakte',    kad.perceel_oppervlakte ? `${kad.perceel_oppervlakte} m²` : '—',      '',     kad.perceel_sectie && kad.perceel_nummer ? `Sectie ${kad.perceel_sectie} nr. ${kad.perceel_nummer}` : 'Kadastrale kaart'],
                 ['Officieel bouwjaar',    kad.official_year ? String(kad.official_year) : '—',                 '',     'Uit BAG pandregister'],
                 ['Geregistreerd gebruik', kad.usage ?? '—',                                                    '',     'Gebruiksdoel'],
                 ['BAG-status',            kad.status ?? '—',                                                   '',     'Huidige registratiestatus'],
@@ -148,6 +149,13 @@ export default function Kadaster({ d }) {
               </div>
             )}
 
+            {kad.perceel_oppervlakte && kad.official_sqm && (
+              <div className="note note-n" style={{ marginTop: 8, fontSize: 11 }}>
+                Perceeloppervlakte <strong>{kad.perceel_oppervlakte} m²</strong> · Woonoppervlakte <strong>{kad.official_sqm} m²</strong>
+                {' '}· FSI {(kad.official_sqm / kad.perceel_oppervlakte).toFixed(2)}
+                {kad.perceel_oppervlakte > kad.official_sqm * 1.5 ? ' — relatief groot perceel, aanbouwpotentieel aanwezig.' : '.'}
+              </div>
+            )}
             {kad.is_split
               ? <div className="note note-y" style={{ marginTop: 10 }}>Dit pand heeft {kad.vbo_count} geregistreerde eenheden — het is al gesplitst. Controleer eigendom en vergunningen zorgvuldig voor het bieden.</div>
               : d.sqm >= 100
