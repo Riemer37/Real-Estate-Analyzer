@@ -13,6 +13,7 @@ export default function Kadaster({ d }) {
   // Vergelijkbare verkopen — lazy geladen van Funda verkocht
   const [comps,        setComps]        = useState(null);
   const [compsLoading, setCompsLoading] = useState(false);
+  const [compsSource,  setCompsSource]  = useState(null);
   const woonplaats = kad.woonplaats ?? d.address?.split(',').pop()?.trim();
 
   useEffect(() => {
@@ -21,10 +22,17 @@ export default function Kadaster({ d }) {
     fetch('/api/comps', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ woonplaats }),
+      body: JSON.stringify({
+        woonplaats,
+        address: d.address,
+        price:   d.price,
+        sqm:     d.sqm,
+        energy:  d.energy,
+        year:    d.year,
+      }),
     })
       .then(r => r.json())
-      .then(data => setComps(data.comps ?? []))
+      .then(data => { setComps(data.comps ?? []); setCompsSource(data.source ?? null); })
       .catch(() => setComps([]))
       .finally(() => setCompsLoading(false));
   }, [woonplaats]);
@@ -181,7 +189,11 @@ export default function Kadaster({ d }) {
       <div className="card">
         <div className="card-title">
           Vergelijkbare verkopen in de buurt
-          <span style={{ fontSize: 10, fontWeight: 400, color: '#A1A1AA', marginLeft: 8 }}>Funda verkocht</span>
+          {compsSource && (
+            <span style={{ fontSize: 10, fontWeight: 400, color: compsSource === 'funda' ? '#15803D' : '#B45309', marginLeft: 8 }}>
+              {compsSource === 'funda' ? 'Funda verkocht' : 'AI-inschatting'}
+            </span>
+          )}
         </div>
 
         {compsLoading && (
@@ -265,7 +277,9 @@ export default function Kadaster({ d }) {
                 </div>
               )}
               <div style={{ fontSize: 10, color: '#C0BDB8', marginTop: 6 }}>
-                Bron: Funda verkocht · Adres, prijs, m², energielabel en kamers uit verkoopdata
+                {compsSource === 'funda'
+                  ? 'Bron: Funda verkocht — werkelijke transacties'
+                  : 'Bron: AI-inschatting op basis van marktkennis — indicatief'}
               </div>
             </>
           );
