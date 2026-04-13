@@ -198,11 +198,14 @@ export default function Kadaster({ d }) {
         )}
 
         {!compsLoading && comps !== null && comps.length > 0 && (() => {
-          const validComps = comps.filter(c => c.price > 0 && c.sqm > 0);
+          const validComps  = comps.filter(c => c.price > 0);
           if (!validComps.length) return null;
 
-          const avg    = Math.floor(validComps.reduce((s, c) => s + Math.floor(c.price / c.sqm), 0) / validComps.length);
-          const da     = subjectPpm - avg;
+          const withSqm = validComps.filter(c => c.sqm > 0);
+          const avg     = withSqm.length
+            ? Math.floor(withSqm.reduce((s, c) => s + Math.floor(c.price / c.sqm), 0) / withSqm.length)
+            : null;
+          const da      = avg != null ? subjectPpm - avg : null;
 
           return (
             <>
@@ -230,33 +233,35 @@ export default function Kadaster({ d }) {
 
               {/* Comp rows */}
               {validComps.map((c, i) => {
-                const cppm   = Math.floor(c.price / c.sqm);
-                const diff   = cppm - subjectPpm;
-                const diffCol = diff > 0 ? '#15803D' : '#B91C1C';
-                const yr     = c.datum ? c.datum.slice(0, 7) : '—';
+                const cppm    = c.sqm > 0 ? Math.floor(c.price / c.sqm) : null;
+                const diff    = cppm != null ? cppm - subjectPpm : null;
+                const diffCol = diff == null ? '#A1A1AA' : diff > 0 ? '#15803D' : '#B91C1C';
+                const yr      = c.datum ? c.datum.slice(0, 7) : '—';
                 return (
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 0.9fr', gap: 6, padding: '8px 10px', borderBottom: '1px solid #F9F9F9', fontSize: 12 }}>
                     <div style={{ color: '#3F3F46', fontSize: 11 }}>{c.address}</div>
                     <div style={{ textAlign: 'right', color: '#71717A', fontSize: 11 }}>{yr}</div>
                     <div style={{ textAlign: 'right', color: '#1C1C1E', fontWeight: 500 }}>{fmt(c.price)}</div>
-                    <div style={{ textAlign: 'right', color: '#71717A' }}>{c.sqm} m²</div>
-                    <div style={{ textAlign: 'right', color: '#52525B', fontWeight: 500 }}>{fmt(cppm)}</div>
+                    <div style={{ textAlign: 'right', color: '#71717A' }}>{c.sqm ? `${c.sqm} m²` : '—'}</div>
+                    <div style={{ textAlign: 'right', color: '#52525B', fontWeight: 500 }}>{cppm ? fmt(cppm) : '—'}</div>
                     <div style={{ textAlign: 'right', color: '#71717A' }}>{c.year_built ?? '—'}</div>
                     <div style={{ textAlign: 'right', fontWeight: 600, color: diffCol }}>
-                      {(diff > 0 ? '+' : '')}{fmt(diff)}
+                      {diff == null ? '—' : (diff > 0 ? '+' : '') + fmt(diff)}
                     </div>
                   </div>
                 );
               })}
 
               {/* Samenvatting */}
-              <div className={`note ${da < 0 ? 'note-g' : 'note-y'}`} style={{ marginTop: 10 }}>
-                Buurtgemiddelde {fmt(avg)}/m² op basis van {validComps.length} verkopen — object ligt{' '}
-                <strong>{fmt(Math.abs(da))}/m² {da < 0 ? 'onder' : 'boven'} dit gemiddelde</strong>
-                {da < 0 ? ' — potentieel voordeel.' : ' — vraagprijs aan de hoge kant.'}
-              </div>
+              {avg != null && da != null && (
+                <div className={`note ${da < 0 ? 'note-g' : 'note-y'}`} style={{ marginTop: 10 }}>
+                  Buurtgemiddelde {fmt(avg)}/m² op basis van {withSqm.length} verkopen — object ligt{' '}
+                  <strong>{fmt(Math.abs(da))}/m² {da < 0 ? 'onder' : 'boven'} dit gemiddelde</strong>
+                  {da < 0 ? ' — potentieel voordeel.' : ' — vraagprijs aan de hoge kant.'}
+                </div>
+              )}
               <div style={{ fontSize: 10, color: '#C0BDB8', marginTop: 6 }}>
-                Bron: Kadaster koopsommen (PDOK) · Woonoppervlakte via BAG reverse geocoding · Straal ~700m · Afgelopen 4 jaar
+                Bron: Kadaster koopsommen (PDOK) · Woonoppervlakte via BAG · Straal ~1km · Afgelopen 5 jaar
               </div>
             </>
           );
