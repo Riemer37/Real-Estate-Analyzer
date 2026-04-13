@@ -174,7 +174,7 @@ async function lookupKadasterFast(address) {
   const bagId = res.bag_id ? res.bag_id.replace(/\D/g, '').padStart(16, '0') : null;
   const epKey = process.env.EP_ONLINE_API_KEY;
 
-  const [bagVbo, wozData, epData, koopData] = await Promise.all([
+  const [bagVbo, wozData, epData] = await Promise.all([
     bagId ? pFetch(
       `https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=2.0.0&request=GetFeature&typeName=bag:verblijfsobject&outputFormat=application/json&count=1&filter=` +
       encodeURIComponent(`<Filter><PropertyIsEqualTo><PropertyName>identificatie</PropertyName><Literal>${bagId}</Literal></PropertyIsEqualTo></Filter>`)
@@ -189,12 +189,7 @@ async function lookupKadasterFast(address) {
       { headers: { Authorization: `Bearer ${epKey}` }, signal: AbortSignal.timeout(4000) }
     ).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null),
 
-    res.lat && res.lon ? (() => {
-      const d = 0.003;
-      const bbox  = `${res.lon - d},${res.lat - d},${res.lon + d},${res.lat + d}`;
-      const since = new Date(Date.now() - 3 * 365.25 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-      return pFetch(`https://api.pdok.nl/kadaster/koopsommen/ogc/v1/collections/koopsommen/items?bbox=${bbox}&datetime=${since}/..&limit=20&sortby=-transactiedatum`);
-    })() : Promise.resolve(null),
+    Promise.resolve(null), // koopsommen: geen open PDOK API beschikbaar
   ]);
 
   // BAG VBO
@@ -251,18 +246,6 @@ async function lookupKadasterFast(address) {
     }
   }
 
-  // Koopsommen
-  if (koopData?.features?.length > 0) {
-    res.koopsommen = koopData.features.map(f => ({
-      prijs: f.properties?.koopsom ?? null,
-      datum: f.properties?.transactiedatum ?? null,
-      opp:   f.properties?.perceeloppervlakte ?? null,
-    })).filter(k => k.prijs);
-    if (res.koopsommen.length > 0) {
-      res.laatste_koopsom       = res.koopsommen[0].prijs;
-      res.laatste_koopsom_datum = res.koopsommen[0].datum;
-    }
-  }
 
   return res;
 }

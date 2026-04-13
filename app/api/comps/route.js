@@ -1,77 +1,112 @@
-// Echte vergelijkbare verkopen via PDOK Kadaster koopsommen + reverse geocoding
-const pFetch = (url, t = 4000) =>
-  fetch(url, { signal: AbortSignal.timeout(t) }).then(r => r.ok ? r.json() : null).catch(() => null);
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
-// Woonoppervlakte via BAG WFS op basis van coördinaten (betrouwbaarder dan Locatieserver)
-async function fetchSqmFromBag(lon, lat) {
-  const d = 0.0002;
-  const bbox = `${lon - d},${lat - d},${lon + d},${lat + d}`;
-  const data = await pFetch(
-    `https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=2.0.0&request=GetFeature` +
-    `&typeName=bag:verblijfsobject&outputFormat=application/json&count=1` +
-    `&bbox=${bbox}`,
-    3000
-  );
-  return data?.features?.[0]?.properties?.oppervlakte ?? null;
+// Stad omzetten naar Funda URL-formaat: "'s-Hertogenbosch" → "s-hertogenbosch"
+function cityToSlug(city) {
+  return (city ?? '')
+    .toLowerCase()
+    .replace(/^'+/, '')          // strip leading apostrofes
+    .replace(/[^a-z0-9\s-]/g, '') // strip speciale tekens
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+// Haal Funda verkocht-pagina op (ScraperAPI met nl land)
+async function scrapeFundaVerkocht(city) {
+  const slug = cityToSlug(city);
+  if (!slug) return null;
+
+  const url  = `https://www.funda.nl/koop/${slug}/verkocht/`;
+  const key  = process.env.SCRAPER_API_KEY;
+  if (!key) return null;
+
+  try {
+    const { data } = await axios.get(
+      `http://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}&render=false&country_code=nl`,
+      { timeout: 8000 }
+    );
+    return data;
+  } catch { return null; }
+}
+
+// Zoek diep in een object naar een waarde voor een van de opgegeven keys
+function deepFind(obj, keys, depth = 0) {
+  if (depth > 12 || !obj || typeof obj !== 'object') return null;
+  for (const key of keys) {
+    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') return obj[key];
+  }
+  for (const val of Object.values(obj)) {
+    if (typeof val === 'object') {
+      const f = deepFind(val, keys, depth + 1);
+      if (f !== null) return f;
+    }
+  }
+  return null;
+}
+
+// Pareer Funda __NEXT_DATA__ voor een zoekresultaten-pagina
+function parseSearchResults(html) {
+  try {
+    const $ = cheerio.load(html);
+    const raw = $('script#__NEXT_DATA__').html();
+    if (!raw) return [];
+    const json = JSON.parse(raw);
+
+    // Funda stopt zoekresultaten in verschillende keys afhankelijk van versie
+    const listings =
+      deepFind(json, ['searchResult', 'listings', 'results', 'objects', 'hits']) ?? [];
+
+    if (!Array.isArray(listings) || listings.length === 0) return [];
+
+    return listings.slice(0, 8).map(item => {
+      const street  = deepFind(item, ['streetName',  'straatnaam',   'street']);
+      const hn      = deepFind(item, ['houseNumber',  'huisnummer',   'houseNr']);
+      const hns     = deepFind(item, ['houseNumberSuffix', 'huisnummertoevoeging', 'addition']);
+      const city    = deepFind(item, ['city', 'woonplaatsnaam', 'woonplaats', 'place']);
+      const price   = deepFind(item, ['sellingPrice', 'koopprijs', 'askingPrice', 'price', 'transactionPrice']);
+      const sqm     = deepFind(item, ['livingArea', 'usableArea', 'woonoppervlakte', 'floorArea']);
+      const energy  = deepFind(item, ['energyLabel', 'energyClass', 'energieklasse', 'energieLabelKlasse']);
+      const year    = deepFind(item, ['constructionYear', 'bouwjaar']);
+      const rooms   = deepFind(item, ['numberOfRooms', 'aantalKamers', 'rooms']);
+      const txDate  = deepFind(item, ['transactionDate', 'transactiedatum', 'soldDate', 'datumVerkoop', 'dateOfSale']);
+
+      const address = street && hn
+        ? `${street} ${hn}${hns ?? ''}, ${city ?? ''}`.trim().replace(/,$/, '')
+        : null;
+
+      const energyNorm = typeof energy === 'string'
+        ? energy.trim().toUpperCase().replace(/^([A-G]).*/, '$1')
+        : null;
+
+      return {
+        address,
+        price:      typeof price === 'number' ? price : null,
+        sqm:        typeof sqm   === 'number' ? sqm   : null,
+        energy:     energyNorm,
+        year_built: typeof year  === 'number' ? year  : null,
+        rooms:      typeof rooms === 'number' ? rooms : null,
+        datum:      txDate ?? null,
+      };
+    }).filter(c => c.address && c.price > 0);
+
+  } catch { return []; }
 }
 
 export async function POST(request) {
   try {
-    const { lat, lon } = await request.json();
-    if (!lat || !lon) return Response.json({ comps: [] });
+    const { woonplaats } = await request.json();
+    if (!woonplaats) return Response.json({ comps: [], source: 'no_city' });
 
-    // Koopsommen in straal ~1km, afgelopen 5 jaar, max 25 resultaten
-    const d     = 0.010;
-    const bbox  = `${lon - d},${lat - d},${lon + d},${lat + d}`;
-    const since = new Date(Date.now() - 5 * 365.25 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const html = await scrapeFundaVerkocht(woonplaats);
+    if (!html) return Response.json({ comps: [], source: 'scrape_failed' });
 
-    const koopData = await pFetch(
-      `https://api.pdok.nl/kadaster/koopsommen/ogc/v1/collections/koopsommen/items` +
-      `?bbox=${bbox}&datetime=${since}/..&limit=25&sortby=-transactiedatum`,
-      8000
-    );
+    const comps = parseSearchResults(html);
 
-    const features = (koopData?.features ?? [])
-      .filter(f => f.properties?.koopsom > 0 && f.geometry?.coordinates)
-      .slice(0, 10);
-
-    if (!features.length) return Response.json({ comps: [] });
-
-    // Reverse geocode + BAG sqm parallel per feature
-    const enriched = await Promise.all(features.map(async f => {
-      const [flon, flat] = f.geometry.coordinates;
-
-      // Locatieserver reverse: adres + bouwjaar
-      const geo = await pFetch(
-        `https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse` +
-        `?lat=${flat}&lon=${flon}&rows=1&distance=100&type=adres` +
-        `&fl=weergavenaam,oppervlakte_obj,bouwjaar,postcode,woonplaatsnaam`,
-        3000
-      );
-      const doc = geo?.response?.docs?.[0];
-
-      // oppervlakte_obj uit Locatieserver, anders probeer BAG WFS
-      let sqm = doc?.oppervlakte_obj ?? null;
-      if (!sqm) sqm = await fetchSqmFromBag(flon, flat);
-
-      return {
-        address:    doc?.weergavenaam ?? null,
-        postcode:   doc?.postcode     ?? null,
-        woonplaats: doc?.woonplaatsnaam ?? null,
-        price:      f.properties.koopsom,
-        sqm,
-        year_built: doc?.bouwjaar ?? null,
-        datum:      f.properties.transactiedatum ?? null,
-        opp_perceel: f.properties.perceeloppervlakte ?? null,
-      };
-    }));
-
-    // Minimumeis: alleen een adres nodig — sqm mag ontbreken
-    const valid = enriched
-      .filter(c => c.address && c.price > 0)
-      .slice(0, 5);
-
-    return Response.json({ comps: valid });
+    return Response.json({
+      comps: comps.slice(0, 5),
+      source: comps.length > 0 ? 'funda_verkocht' : 'parse_failed',
+      city: woonplaats,
+    });
   } catch (e) {
     return Response.json({ comps: [], error: e.message });
   }

@@ -10,23 +10,24 @@ export default function Kadaster({ d }) {
 
   const subjectPpm = Math.floor(d.price / Math.max(d.sqm, 1));
 
-  // Echte Kadaster comps — lazy geladen op basis van coördinaten
+  // Vergelijkbare verkopen — lazy geladen van Funda verkocht
   const [comps,        setComps]        = useState(null);
   const [compsLoading, setCompsLoading] = useState(false);
+  const woonplaats = kad.woonplaats ?? d.address?.split(',').pop()?.trim();
 
   useEffect(() => {
-    if (!kad.lat || !kad.lon || comps !== null) return;
+    if (!woonplaats || comps !== null) return;
     setCompsLoading(true);
     fetch('/api/comps', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lat: kad.lat, lon: kad.lon }),
+      body: JSON.stringify({ woonplaats }),
     })
       .then(r => r.json())
       .then(data => setComps(data.comps ?? []))
       .catch(() => setComps([]))
       .finally(() => setCompsLoading(false));
-  }, [kad.lat, kad.lon]);
+  }, [woonplaats]);
 
   return (
     <>
@@ -180,21 +181,21 @@ export default function Kadaster({ d }) {
       <div className="card">
         <div className="card-title">
           Vergelijkbare verkopen in de buurt
-          <span style={{ fontSize: 10, fontWeight: 400, color: '#A1A1AA', marginLeft: 8 }}>Kadaster — werkelijke transacties</span>
+          <span style={{ fontSize: 10, fontWeight: 400, color: '#A1A1AA', marginLeft: 8 }}>Funda verkocht</span>
         </div>
 
         {compsLoading && (
           <div style={{ padding: '18px 0', textAlign: 'center', fontSize: 12, color: '#A1A1AA' }}>
-            Kadaster transacties ophalen…
+            Recente verkopen ophalen…
           </div>
         )}
 
-        {!compsLoading && comps === null && !kad.lat && (
-          <div className="note note-n" style={{ fontSize: 11 }}>Coördinaten niet beschikbaar — geen Kadaster lookup mogelijk.</div>
+        {!compsLoading && comps === null && !woonplaats && (
+          <div className="note note-n" style={{ fontSize: 11 }}>Stad niet beschikbaar — geen vergelijking mogelijk.</div>
         )}
 
         {!compsLoading && comps !== null && comps.length === 0 && (
-          <div className="note note-n" style={{ fontSize: 11 }}>Geen recente transacties gevonden in de directe omgeving (straal ~700m, afgelopen 4 jaar).</div>
+          <div className="note note-n" style={{ fontSize: 11 }}>Geen recente verkopen gevonden voor {woonplaats}. Controleer de verbinding of probeer opnieuw.</div>
         )}
 
         {!compsLoading && comps !== null && comps.length > 0 && (() => {
@@ -210,24 +211,26 @@ export default function Kadaster({ d }) {
           return (
             <>
               {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 0.9fr', gap: 6, padding: '6px 10px', borderBottom: '1px solid #F4F4F5', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#C0BDB8' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 0.9fr 1.2fr 0.7fr 0.8fr 0.6fr 0.6fr 0.9fr', gap: 6, padding: '6px 10px', borderBottom: '1px solid #F4F4F5', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#C0BDB8' }}>
                 <div>Adres</div>
                 <div style={{ textAlign: 'right' }}>Datum</div>
                 <div style={{ textAlign: 'right' }}>Verkoopprijs</div>
-                <div style={{ textAlign: 'right' }}>m² wonen</div>
+                <div style={{ textAlign: 'right' }}>m²</div>
                 <div style={{ textAlign: 'right' }}>€/m²</div>
-                <div style={{ textAlign: 'right' }}>Bouwjaar</div>
+                <div style={{ textAlign: 'right' }}>Label</div>
+                <div style={{ textAlign: 'right' }}>Kms</div>
                 <div style={{ textAlign: 'right' }}>vs object</div>
               </div>
 
               {/* Subject row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 0.9fr', gap: 6, padding: '8px 10px', background: '#EFF6FF', borderRadius: 6, margin: '4px 0', fontSize: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 0.9fr 1.2fr 0.7fr 0.8fr 0.6fr 0.6fr 0.9fr', gap: 6, padding: '8px 10px', background: '#EFF6FF', borderRadius: 6, margin: '4px 0', fontSize: 12 }}>
                 <div style={{ fontWeight: 600, color: '#1D4ED8' }}>{d.address}</div>
                 <div style={{ textAlign: 'right', color: '#71717A' }}>Nu</div>
                 <div style={{ textAlign: 'right', fontWeight: 600, color: '#1D4ED8' }}>{fmt(d.price)}</div>
-                <div style={{ textAlign: 'right', color: '#1C1C1E' }}>{d.sqm} m²</div>
+                <div style={{ textAlign: 'right', color: '#1C1C1E' }}>{d.sqm}</div>
                 <div style={{ textAlign: 'right', fontWeight: 600, color: '#1D4ED8' }}>{fmt(subjectPpm)}</div>
-                <div style={{ textAlign: 'right', color: '#71717A' }}>{d.year}</div>
+                <div style={{ textAlign: 'right' }}><span className={`eb eb-${d.energy}`}>{d.energy}</span></div>
+                <div style={{ textAlign: 'right', color: '#71717A' }}>{d.rooms}</div>
                 <div style={{ textAlign: 'right', color: '#A1A1AA' }}>—</div>
               </div>
 
@@ -238,13 +241,14 @@ export default function Kadaster({ d }) {
                 const diffCol = diff == null ? '#A1A1AA' : diff > 0 ? '#15803D' : '#B91C1C';
                 const yr      = c.datum ? c.datum.slice(0, 7) : '—';
                 return (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 0.9fr', gap: 6, padding: '8px 10px', borderBottom: '1px solid #F9F9F9', fontSize: 12 }}>
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2.2fr 0.9fr 1.2fr 0.7fr 0.8fr 0.6fr 0.6fr 0.9fr', gap: 6, padding: '8px 10px', borderBottom: '1px solid #F9F9F9', fontSize: 12 }}>
                     <div style={{ color: '#3F3F46', fontSize: 11 }}>{c.address}</div>
                     <div style={{ textAlign: 'right', color: '#71717A', fontSize: 11 }}>{yr}</div>
                     <div style={{ textAlign: 'right', color: '#1C1C1E', fontWeight: 500 }}>{fmt(c.price)}</div>
-                    <div style={{ textAlign: 'right', color: '#71717A' }}>{c.sqm ? `${c.sqm} m²` : '—'}</div>
+                    <div style={{ textAlign: 'right', color: '#71717A' }}>{c.sqm ?? '—'}</div>
                     <div style={{ textAlign: 'right', color: '#52525B', fontWeight: 500 }}>{cppm ? fmt(cppm) : '—'}</div>
-                    <div style={{ textAlign: 'right', color: '#71717A' }}>{c.year_built ?? '—'}</div>
+                    <div style={{ textAlign: 'right' }}>{c.energy ? <span className={`eb eb-${c.energy}`}>{c.energy}</span> : <span style={{ color: '#C0BDB8' }}>—</span>}</div>
+                    <div style={{ textAlign: 'right', color: '#71717A' }}>{c.rooms ?? '—'}</div>
                     <div style={{ textAlign: 'right', fontWeight: 600, color: diffCol }}>
                       {diff == null ? '—' : (diff > 0 ? '+' : '') + fmt(diff)}
                     </div>
@@ -261,7 +265,7 @@ export default function Kadaster({ d }) {
                 </div>
               )}
               <div style={{ fontSize: 10, color: '#C0BDB8', marginTop: 6 }}>
-                Bron: Kadaster koopsommen (PDOK) · Woonoppervlakte via BAG · Straal ~1km · Afgelopen 5 jaar
+                Bron: Funda verkocht · Adres, prijs, m², energielabel en kamers uit verkoopdata
               </div>
             </>
           );
