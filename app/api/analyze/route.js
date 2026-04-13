@@ -174,7 +174,7 @@ async function lookupKadasterFast(address) {
   const bagId = res.bag_id ? res.bag_id.replace(/\D/g, '').padStart(16, '0') : null;
   const epKey = process.env.EP_ONLINE_API_KEY;
 
-  const [bagVbo, wozData, epData] = await Promise.all([
+  const [bagVbo, wozData, epData, rcePoints, rcePolygons] = await Promise.all([
     bagId ? pFetch(
       `https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=2.0.0&request=GetFeature&typeName=bag:verblijfsobject&outputFormat=application/json&count=1&filter=` +
       encodeURIComponent(`<Filter><PropertyIsEqualTo><PropertyName>identificatie</PropertyName><Literal>${bagId}</Literal></PropertyIsEqualTo></Filter>`)
@@ -189,7 +189,17 @@ async function lookupKadasterFast(address) {
       { headers: { Authorization: `Bearer ${epKey}` }, signal: AbortSignal.timeout(4000) }
     ).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null),
 
-    Promise.resolve(null), // koopsommen: geen open PDOK API beschikbaar
+    // RCE rijksmonumenten (punten, kleine bbox ~20m)
+    res.lat && res.lon ? pFetch(
+      `https://api.pdok.nl/rce/beschermde-gebieden-cultuurhistorie/ogc/v1/collections/rce_inspire_points/items` +
+      `?bbox=${res.lon - 0.0002},${res.lat - 0.0002},${res.lon + 0.0002},${res.lat + 0.0002}&limit=5`
+    ) : Promise.resolve(null),
+
+    // RCE beschermde gezichten (polygonen, kleine bbox)
+    res.lat && res.lon ? pFetch(
+      `https://api.pdok.nl/rce/beschermde-gebieden-cultuurhistorie/ogc/v1/collections/rce_inspire_polygons/items` +
+      `?bbox=${res.lon - 0.0001},${res.lat - 0.0001},${res.lon + 0.0001},${res.lat + 0.0001}&limit=5`
+    ) : Promise.resolve(null),
   ]);
 
   // BAG VBO
@@ -246,6 +256,27 @@ async function lookupKadasterFast(address) {
     }
   }
 
+  // RCE rijksmonumenten
+  res.is_rijksmonument  = false;
+  res.is_beschermd_gezicht = false;
+  const allRce = [
+    ...(rcePoints?.features   ?? []),
+    ...(rcePolygons?.features ?? []),
+  ];
+  for (const f of allRce) {
+    const ns  = f.properties?.namespace ?? '';
+    const url = f.properties?.ci_citation ?? '';
+    if (ns === 'nlps-rijksmonumenten') {
+      res.is_rijksmonument  = true;
+      const m = url.match(/\/monumenten\/(\d+)/);
+      res.monument_nummer   = m ? m[1] : (f.properties?.localid?.replace('.00','') ?? null);
+      res.monument_url      = url || null;
+    }
+    if (ns === 'nlps-stadsendorpsgezichten') {
+      res.is_beschermd_gezicht = true;
+      res.beschermd_gezicht_naam = f.properties?.text ?? null;
+    }
+  }
 
   return res;
 }
