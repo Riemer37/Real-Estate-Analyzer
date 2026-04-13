@@ -1,33 +1,50 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-// ── Funda zoeken op adres ─────────────────────────────────────────────────────
-function addressToFundaSearch(address) {
-  // "Keizersgracht 123, Amsterdam" → zoek-URL
-  const clean = address.trim();
-  return `https://www.funda.nl/zoeken/koop?selected_area=%5B%22nl%22%5D&query=${encodeURIComponent(clean)}`;
-}
+// Bekende Nederlandse vastgoedplatforms — URL-patronen die wijzen op een actieve listing
+const LISTING_PATTERNS = [
+  { re: /funda\.nl\/detail\/(koop|huur)\/[^"'\s]+/,        base: 'https://www.funda.nl' },
+  { re: /pararius\.nl\/(huis|appartement|woning)-te-(koop|huur)\/[^"'\s]+/, base: 'https://www.pararius.nl' },
+  { re: /jaap\.nl\/[a-z]+-[a-z]+-[\w-]+\/\d+/,             base: 'https://www.jaap.nl' },
+  { re: /huislijn\.nl\/[^"'\s]+\/te-koop[^"'\s]*/,          base: 'https://www.huislijn.nl' },
+  { re: /makelaarsland\.nl\/aanbod\/[^"'\s]+/,              base: 'https://www.makelaarsland.nl' },
+  { re: /vendr\.nl\/[^"'\s]+-te-koop-[^"'\s]+/,            base: 'https://www.vendr.nl' },
+];
 
-function deepFind(obj, keys, depth = 0) {
-  if (depth > 12 || !obj || typeof obj !== 'object') return null;
-  for (const key of keys) {
-    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') return obj[key];
-  }
-  for (const val of Object.values(obj)) {
-    if (typeof val === 'object') {
-      const f = deepFind(val, keys, depth + 1);
-      if (f !== null) return f;
+function extractListingUrl(html) {
+  // Zoek in de ruwe HTML naar bekende URL-patronen
+  for (const { re, base } of LISTING_PATTERNS) {
+    const m = html.match(re);
+    if (m) {
+      const raw = m[0].replace(/['">\s].*/,'');
+      return raw.startsWith('http') ? raw : `${base}/${raw.replace(/^\//, '')}`;
     }
   }
-  return null;
+
+  // Fallback: alle <a href> links langs gaan
+  const $ = cheerio.load(html);
+  let found = null;
+  $('a[href]').each((_, el) => {
+    if (found) return;
+    const href = $(el).attr('href') ?? '';
+    for (const { re, base } of LISTING_PATTERNS) {
+      if (re.test(href)) {
+        found = href.startsWith('http') ? href : `${base}${href}`;
+        return;
+      }
+    }
+  });
+  return found;
 }
 
-// Zoek een Funda listing URL op basis van adres
-async function findFundaListing(address) {
+// DuckDuckGo HTML zoeken — geen JavaScript nodig, pikt alle platforms op
+async function searchListingOnline(address) {
   const key = process.env.SCRAPER_API_KEY;
   if (!key) return null;
 
-  const searchUrl = addressToFundaSearch(address);
+  // Zoek op adres + "te koop" — DuckDuckGo HTML geeft resultaten van alle sites
+  const query = `"${address}" te koop`;
+  const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&kl=nl-nl`;
 
   try {
     const { data: html } = await axios.get(
@@ -35,56 +52,28 @@ async function findFundaListing(address) {
       { timeout: 8000 }
     );
 
+    // Zoek eerst in DuckDuckGo resultaat-URLs
     const $ = cheerio.load(html);
-
-    // Strategie 1: __NEXT_DATA__ — zoek eerste listing URL
-    const raw = $('script#__NEXT_DATA__').html();
-    if (raw) {
-      try {
-        const json = JSON.parse(raw);
-        // Zoek naar listing URLs in de data
-        const url = deepFind(json, ['url', 'listingUrl', 'detailUrl', 'href', 'permalink']);
-        if (url && typeof url === 'string' && url.includes('funda.nl') && url.includes('/detail/')) {
-          return url.startsWith('http') ? url : `https://www.funda.nl${url}`;
-        }
-
-        // Zoek arrays met listings
-        function findListingUrl(obj, depth = 0) {
-          if (depth > 15 || !obj || typeof obj !== 'object') return null;
-          if (Array.isArray(obj)) {
-            for (const item of obj.slice(0, 5)) {
-              const u = deepFind(item, ['url', 'listingUrl', 'detailUrl', 'permalink', 'globalId']);
-              if (u && typeof u === 'string') {
-                if (u.includes('/detail/')) return u.startsWith('http') ? u : `https://www.funda.nl${u}`;
-              }
-              const r = findListingUrl(item, depth + 1);
-              if (r) return r;
-            }
-          } else {
-            for (const val of Object.values(obj)) {
-              const r = findListingUrl(val, depth + 1);
-              if (r) return r;
-            }
-          }
-          return null;
-        }
-        const listingUrl = findListingUrl(json);
-        if (listingUrl) return listingUrl;
-      } catch {}
-    }
-
-    // Strategie 2: zoek href-links naar /detail/ in de HTML
     let found = null;
-    $('a[href*="/detail/koop/"]').each((_, el) => {
-      if (!found) {
-        const href = $(el).attr('href') ?? '';
-        if (href.includes('/detail/')) {
-          found = href.startsWith('http') ? href : `https://www.funda.nl${href}`;
+
+    // DuckDuckGo stopt de echte URL in data-href of href van .result__url / .result__a
+    $('a.result__a, a[data-href], .result__url').each((_, el) => {
+      if (found) return;
+      const href = $(el).attr('href') ?? $(el).attr('data-href') ?? $(el).text() ?? '';
+      for (const { re, base } of LISTING_PATTERNS) {
+        if (re.test(href)) {
+          const m = href.match(re);
+          if (m) {
+            found = href.startsWith('http') ? href.match(/https?:\/\/[^\s"'>]+/)?.[0] : `${base}/${m[0]}`;
+            return;
+          }
         }
       }
     });
-    return found;
+    if (found) return found;
 
+    // Fallback: zoek in de volledige HTML-tekst
+    return extractListingUrl(html);
   } catch { return null; }
 }
 
@@ -94,8 +83,8 @@ export async function POST(request) {
     const { address } = await request.json();
     if (!address) return Response.json({ error: 'Geen adres opgegeven' }, { status: 400 });
 
-    // Zoek eerst of er een actieve Funda-listing is
-    const listingUrl = await findFundaListing(address);
+    // Zoek op alle vastgoedplatforms via DuckDuckGo
+    const listingUrl = await searchListingOnline(address);
 
     if (listingUrl) {
       // Gevonden — stuur door naar de analyze route intern
@@ -110,7 +99,7 @@ export async function POST(request) {
 
     // Niet gevonden — geef terug dat er geen actieve listing is
     return Response.json({
-      error: `Geen actieve listing gevonden op Funda voor "${address}". Voer een directe URL in als de woning wel te koop staat, of controleer het adres.`,
+      error: `Geen actieve listing gevonden voor "${address}" op Funda, Pararius, Jaap of andere platforms. Voer een directe URL in als de woning wel te koop staat.`,
       address_not_listed: true,
     }, { status: 404 });
 
