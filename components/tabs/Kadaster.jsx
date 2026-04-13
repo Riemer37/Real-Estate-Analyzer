@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import { fmt } from '@/lib/utils';
 
 export default function Kadaster({ d }) {
@@ -8,7 +9,24 @@ export default function Kadaster({ d }) {
     : null;
 
   const subjectPpm = Math.floor(d.price / Math.max(d.sqm, 1));
-  const valid = (d.comps ?? []).filter(c => c.price > 0 && c.sqm > 0);
+
+  // Echte Kadaster comps — lazy geladen op basis van coördinaten
+  const [comps,        setComps]        = useState(null);
+  const [compsLoading, setCompsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!kad.lat || !kad.lon || comps !== null) return;
+    setCompsLoading(true);
+    fetch('/api/comps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat: kad.lat, lon: kad.lon }),
+    })
+      .then(r => r.json())
+      .then(data => setComps(data.comps ?? []))
+      .catch(() => setComps([]))
+      .finally(() => setCompsLoading(false));
+  }, [kad.lat, kad.lon]);
 
   return (
     <>
@@ -160,31 +178,88 @@ export default function Kadaster({ d }) {
       </div>
 
       <div className="card">
-        <div className="card-title">Vergelijkbare verkopen in de buurt</div>
-        <div className="comp-hd">
-          <div>Adres</div><div style={{textAlign:'right'}}>Jaar</div><div style={{textAlign:'right'}}>Verkoopprijs</div><div style={{textAlign:'right'}}>€/m²</div><div style={{textAlign:'right'}}>vs object</div>
+        <div className="card-title">
+          Vergelijkbare verkopen in de buurt
+          <span style={{ fontSize: 10, fontWeight: 400, color: '#A1A1AA', marginLeft: 8 }}>Kadaster — werkelijke transacties</span>
         </div>
-        {valid.map((c, i) => {
-          const cppm = Math.floor(c.price / Math.max(c.sqm, 1));
-          const diff = cppm - subjectPpm;
-          const diffCol = diff > 0 ? '#15803D' : '#B91C1C';
-          const diffStr = (diff > 0 ? '+' : '') + fmt(diff) + '/m²';
+
+        {compsLoading && (
+          <div style={{ padding: '18px 0', textAlign: 'center', fontSize: 12, color: '#A1A1AA' }}>
+            Kadaster transacties ophalen…
+          </div>
+        )}
+
+        {!compsLoading && comps === null && !kad.lat && (
+          <div className="note note-n" style={{ fontSize: 11 }}>Coördinaten niet beschikbaar — geen Kadaster lookup mogelijk.</div>
+        )}
+
+        {!compsLoading && comps !== null && comps.length === 0 && (
+          <div className="note note-n" style={{ fontSize: 11 }}>Geen recente transacties gevonden in de directe omgeving (straal ~700m, afgelopen 4 jaar).</div>
+        )}
+
+        {!compsLoading && comps !== null && comps.length > 0 && (() => {
+          const validComps = comps.filter(c => c.price > 0 && c.sqm > 0);
+          if (!validComps.length) return null;
+
+          const avg    = Math.floor(validComps.reduce((s, c) => s + Math.floor(c.price / c.sqm), 0) / validComps.length);
+          const da     = subjectPpm - avg;
+
           return (
-            <div className="comp-row" key={i}>
-              <div className="ca">{c.address}</div>
-              <div className="cv">{c.year}</div>
-              <div className="cp">{fmt(c.price)}</div>
-              <div className="cv">{fmt(cppm)}/m²</div>
-              <div className="cv"><span style={{ color: diffCol, fontWeight: 600 }}>{diffStr}</span></div>
-            </div>
+            <>
+              {/* Header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 0.9fr', gap: 6, padding: '6px 10px', borderBottom: '1px solid #F4F4F5', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#C0BDB8' }}>
+                <div>Adres</div>
+                <div style={{ textAlign: 'right' }}>Datum</div>
+                <div style={{ textAlign: 'right' }}>Verkoopprijs</div>
+                <div style={{ textAlign: 'right' }}>m² wonen</div>
+                <div style={{ textAlign: 'right' }}>€/m²</div>
+                <div style={{ textAlign: 'right' }}>Bouwjaar</div>
+                <div style={{ textAlign: 'right' }}>vs object</div>
+              </div>
+
+              {/* Subject row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 0.9fr', gap: 6, padding: '8px 10px', background: '#EFF6FF', borderRadius: 6, margin: '4px 0', fontSize: 12 }}>
+                <div style={{ fontWeight: 600, color: '#1D4ED8' }}>{d.address}</div>
+                <div style={{ textAlign: 'right', color: '#71717A' }}>Nu</div>
+                <div style={{ textAlign: 'right', fontWeight: 600, color: '#1D4ED8' }}>{fmt(d.price)}</div>
+                <div style={{ textAlign: 'right', color: '#1C1C1E' }}>{d.sqm} m²</div>
+                <div style={{ textAlign: 'right', fontWeight: 600, color: '#1D4ED8' }}>{fmt(subjectPpm)}</div>
+                <div style={{ textAlign: 'right', color: '#71717A' }}>{d.year}</div>
+                <div style={{ textAlign: 'right', color: '#A1A1AA' }}>—</div>
+              </div>
+
+              {/* Comp rows */}
+              {validComps.map((c, i) => {
+                const cppm   = Math.floor(c.price / c.sqm);
+                const diff   = cppm - subjectPpm;
+                const diffCol = diff > 0 ? '#15803D' : '#B91C1C';
+                const yr     = c.datum ? c.datum.slice(0, 7) : '—';
+                return (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.2fr 0.8fr 0.8fr 0.7fr 0.9fr', gap: 6, padding: '8px 10px', borderBottom: '1px solid #F9F9F9', fontSize: 12 }}>
+                    <div style={{ color: '#3F3F46', fontSize: 11 }}>{c.address}</div>
+                    <div style={{ textAlign: 'right', color: '#71717A', fontSize: 11 }}>{yr}</div>
+                    <div style={{ textAlign: 'right', color: '#1C1C1E', fontWeight: 500 }}>{fmt(c.price)}</div>
+                    <div style={{ textAlign: 'right', color: '#71717A' }}>{c.sqm} m²</div>
+                    <div style={{ textAlign: 'right', color: '#52525B', fontWeight: 500 }}>{fmt(cppm)}</div>
+                    <div style={{ textAlign: 'right', color: '#71717A' }}>{c.year_built ?? '—'}</div>
+                    <div style={{ textAlign: 'right', fontWeight: 600, color: diffCol }}>
+                      {(diff > 0 ? '+' : '')}{fmt(diff)}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Samenvatting */}
+              <div className={`note ${da < 0 ? 'note-g' : 'note-y'}`} style={{ marginTop: 10 }}>
+                Buurtgemiddelde {fmt(avg)}/m² op basis van {validComps.length} verkopen — object ligt{' '}
+                <strong>{fmt(Math.abs(da))}/m² {da < 0 ? 'onder' : 'boven'} dit gemiddelde</strong>
+                {da < 0 ? ' — potentieel voordeel.' : ' — vraagprijs aan de hoge kant.'}
+              </div>
+              <div style={{ fontSize: 10, color: '#C0BDB8', marginTop: 6 }}>
+                Bron: Kadaster koopsommen (PDOK) · Woonoppervlakte via BAG reverse geocoding · Straal ~700m · Afgelopen 4 jaar
+              </div>
+            </>
           );
-        })}
-        {valid.length > 0 && (() => {
-          const avg = Math.floor(valid.reduce((s, c) => s + Math.floor(c.price / Math.max(c.sqm, 1)), 0) / valid.length);
-          const da  = subjectPpm - avg;
-          return <div className={`note ${da < 0 ? 'note-g' : 'note-y'}`} style={{ marginTop: 10 }}>
-            {da < 0 ? `Object ligt ${fmt(Math.abs(da))}/m² onder het buurtgemiddelde van ${fmt(avg)}/m² — potentieel voordeel.` : `Object ligt ${fmt(da)}/m² boven het buurtgemiddelde van ${fmt(avg)}/m² — vraagprijs aan de hoge kant.`}
-          </div>;
         })()}
       </div>
     </>
