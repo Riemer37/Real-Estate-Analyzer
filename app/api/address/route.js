@@ -171,11 +171,14 @@ export async function POST(request) {
       return Response.json({ ...data, found_listing: listingUrl });
     }
 
-    // Niet op Funda of Pararius gevonden
-    return Response.json({
-      error: `"${pdok?.weergavenaam ?? address}" staat niet te koop op Funda of Pararius. Voer een directe URL in als de woning elders staat.`,
-      address_not_listed: true,
-    }, { status: 404 });
+    // Niet op Funda of Pararius gevonden — toch volledige analyse via Kadaster-data
+    const res  = await fetch(new URL('/api/analyze', request.url), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: pdok?.weergavenaam ?? address }),
+    });
+    const data = await res.json();
+    return Response.json({ ...data, address_not_listed: true, found_listing: null });
 
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });

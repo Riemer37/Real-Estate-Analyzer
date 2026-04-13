@@ -345,23 +345,35 @@ function berekenPotentieel({ sqm, property_type, year, kad, erfpacht }) {
 // ── Hoofd-handler ─────────────────────────────────────────────────────────────
 export async function POST(request) {
   try {
-    const { url } = await request.json();
+    const { url, address: directAddress } = await request.json();
+
+    // Adres-modus: geen URL, direct adres meegegeven (bijv. vanuit address-route)
+    const isAddressMode = !url && !!directAddress;
 
     // Adres uit URL halen voor vroege Kadaster-start (Funda-URLs bevatten het adres)
-    const quickAddress = urlToAddress(url);
+    const quickAddress = isAddressMode ? directAddress : urlToAddress(url);
 
-    // ── PARALLEL FASE 1: pagina ophalen + Kadaster (als adres bekend uit URL) ──
+    // ── PARALLEL FASE 1: pagina ophalen + Kadaster ────────────────────────────
     const [pageResult, earlyKad] = await Promise.all([
-      fetchPage(url),
-      quickAddress ? lookupKadasterFast(quickAddress) : Promise.resolve(null),
+      isAddressMode ? Promise.resolve({ structured: null, text: '' }) : fetchPage(url),
+      quickAddress  ? lookupKadasterFast(quickAddress) : Promise.resolve(null),
     ]);
 
     const { structured, text } = pageResult;
 
-    // Beste adres: structured data wint van URL-parse
+    // Beste adres: structured data wint van directe invoer of URL-parse
     const bestAddress = structured?.address || quickAddress;
 
     // ── PARALLEL FASE 2: AI analyse + Kadaster verfijnen (indien nodig) ────────
+    // Bij adres-modus: geef Kadaster-data als hints mee aan AI
+    const kadHints = isAddressMode && earlyKad?.found ? [
+      earlyKad.official_sqm  ? `KNOWN_SQM: ${earlyKad.official_sqm}`     : null,
+      earlyKad.official_year ? `KNOWN_YEAR: ${earlyKad.official_year}`    : null,
+      earlyKad.woz_huidig    ? `KNOWN_WOZ: ${earlyKad.woz_huidig}`       : null,
+      earlyKad.energy_label  ? `KNOWN_ENERGY: ${earlyKad.energy_label}`  : null,
+      earlyKad.official_address ? `KNOWN_ADDRESS: ${earlyKad.official_address}` : null,
+    ].filter(Boolean).join('\n') : '';
+
     const knownFacts = structured ? [
       structured?.price  ? `KNOWN_PRICE: ${structured.price}`   : null,
       structured.sqm     ? `KNOWN_SQM: ${structured.sqm}`       : null,
@@ -369,7 +381,7 @@ export async function POST(request) {
       structured.energy  ? `KNOWN_ENERGY: ${structured.energy}`  : null,
       structured.rooms   ? `KNOWN_ROOMS: ${structured.rooms}`    : null,
       structured.address ? `KNOWN_ADDRESS: ${structured.address}` : null,
-    ].filter(Boolean).join('\n') : '';
+    ].filter(Boolean).join('\n') : kadHints;
 
     const [aiMsg, kad] = await Promise.all([
       // AI: Haiku — snel (2-4s), temperature:0 voor consistentie
@@ -384,7 +396,7 @@ ${knownFacts ? `KNOWN DATA (use directly):\n${knownFacts}\n` : ''}PAGE: ${text |
 
 Return ONLY these keys, one per line:
 ADDRESS: [use KNOWN_ADDRESS or extract from page]
-PRICE: [digits only — use KNOWN_PRICE]
+PRICE: [digits only — use KNOWN_PRICE; if no KNOWN_PRICE use KNOWN_WOZ×1.10 as market-price estimate]
 SQM: [digits only — use KNOWN_SQM]
 YEAR: [digits only — use KNOWN_YEAR]
 ENERGY: [A-G — use KNOWN_ENERGY]
@@ -496,7 +508,7 @@ FULL_ANALYSIS: [5 sentences — acquisition, renovation, exit, risks, verdict]`,
       full_analysis:    d.FULL_ANALYSIS ?? '',
       kadaster:         kad,
       potentieel:       berekenPotentieel({ sqm, property_type, year, kad, erfpacht }),
-      structured_source: structured ? 'funda_next_data' : (quickAddress ? 'url_parse' : 'ai_only'),
+      structured_source: structured ? 'funda_next_data' : (isAddressMode ? 'address_kadaster' : (quickAddress ? 'url_parse' : 'ai_only')),
       saved_at: new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' }),
     });
   } catch (e) {
