@@ -8,8 +8,9 @@ import Acquisition  from './tabs/Acquisition';
 import Renovation   from './tabs/Renovation';
 import ExitStrategy from './tabs/ExitStrategy';
 
-const TABS  = ['Overzicht', 'Kadaster', 'Potentieel', 'Aankoop', 'Renovatie', 'Exitstrategie'];
-const STEPS = ['Pagina ophalen', 'Woninggegevens extraheren', 'Kadaster PDOK raadplegen', 'Vergelijkbare verkopen analyseren', 'Investeringsmodel bouwen'];
+const TABS       = ['Overzicht', 'Kadaster', 'Potentieel', 'Aankoop', 'Renovatie', 'Exitstrategie'];
+const STEPS      = ['Pagina ophalen', 'Woninggegevens extraheren', 'Kadaster PDOK raadplegen', 'Vergelijkbare verkopen analyseren', 'Investeringsmodel bouwen'];
+const STEPS_ADDR = ['Funda doorzoeken op adres', 'Listing gevonden — pagina ophalen', 'Kadaster PDOK raadplegen', 'Vergelijkbare verkopen analyseren', 'Investeringsmodel bouwen'];
 
 // ── Hulpfuncties ──────────────────────────────────────────────────────────────
 
@@ -19,7 +20,9 @@ export default function Dashboard() {
   const [url,       setUrl]       = useState('');
   const [loading,   setLoading]   = useState(false);
   const [step,      setStep]      = useState(0);
+  const [activeSteps, setActiveSteps] = useState(STEPS);
   const [data,      setData]      = useState(null);
+  const [error,     setError]     = useState(null);
   const [saved,     setSaved]     = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [totalAcq,  setTotalAcq]  = useState(null);
@@ -68,11 +71,13 @@ export default function Dashboard() {
     }
 
     setLoading(true);
+    setError(null);
     setStep(0);
 
     const isAddress = !isUrl(trimmed);
     const endpoint  = isAddress ? '/api/address' : '/api/analyze';
     const body      = isAddress ? { address: trimmed } : { url: trimmed };
+    setActiveSteps(isAddress ? STEPS_ADDR : STEPS);
 
     const ticker = setInterval(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 700);
     try {
@@ -87,7 +92,7 @@ export default function Dashboard() {
       setActiveTab(0);
     } catch (e) {
       clearInterval(ticker);
-      alert('Fout: ' + e.message);
+      setError(e.message);
     }
     setLoading(false);
   }
@@ -136,6 +141,11 @@ export default function Dashboard() {
         <button onClick={analyze} style={{ width: '100%', padding: '8px 12px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, cursor: 'pointer' }}>
           Woning analyseren →
         </button>
+        {error && (
+          <div style={{ marginTop: 8, padding: '8px 10px', background: '#3F1212', border: '1px solid #7F1D1D', borderRadius: 8, fontSize: 11, color: '#FCA5A5', lineHeight: 1.5 }}>
+            {error}
+          </div>
+        )}
         {saved.length > 0 && (
           <>
             <div className="sb-div" />
@@ -166,14 +176,14 @@ export default function Dashboard() {
             <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, color: '#1C1C1E' }}>Woning analyseren</div>
             <div style={{ fontSize: 11, color: '#A1A1AA', maxWidth: 380, textAlign: 'center', wordBreak: 'break-all' }}>{url.slice(0, 70)}{url.length > 70 ? '…' : ''}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: 380 }}>
-              {STEPS.map((s, j) => {
+              {activeSteps.map((s, j) => {
                 const cls = j < step ? 'ok' : j === step ? 'on' : '';
                 const ic  = j < step ? '✓' : j === step ? '→' : '·';
                 return <div key={j} className={`ls ${cls}`}><div className={`ld ${cls}`} />{ic} {s}</div>;
               })}
             </div>
             <div style={{ width: 380, height: 2, background: '#E4E4E7', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: '#1C1C1E', borderRadius: 2, width: `${(step + 1) / STEPS.length * 100}%`, transition: 'width .5s ease' }} />
+              <div style={{ height: '100%', background: '#1C1C1E', borderRadius: 2, width: `${(step + 1) / activeSteps.length * 100}%`, transition: 'width .5s ease' }} />
             </div>
           </div>
         )}
