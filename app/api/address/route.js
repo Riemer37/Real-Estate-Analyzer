@@ -1,93 +1,120 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-// Bekende Nederlandse vastgoedplatforms — URL-patronen die wijzen op een actieve listing
-const LISTING_PATTERNS = [
-  { re: /funda\.nl\/detail\/(koop|huur)\/[^"'\s]+/,        base: 'https://www.funda.nl' },
-  { re: /pararius\.nl\/(huis|appartement|woning)-te-(koop|huur)\/[^"'\s]+/, base: 'https://www.pararius.nl' },
-  { re: /jaap\.nl\/[a-z]+-[a-z]+-[\w-]+\/\d+/,             base: 'https://www.jaap.nl' },
-  { re: /huislijn\.nl\/[^"'\s]+\/te-koop[^"'\s]*/,          base: 'https://www.huislijn.nl' },
-  { re: /makelaarsland\.nl\/aanbod\/[^"'\s]+/,              base: 'https://www.makelaarsland.nl' },
-  { re: /vendr\.nl\/[^"'\s]+-te-koop-[^"'\s]+/,            base: 'https://www.vendr.nl' },
-];
-
-function extractListingUrl(html) {
-  // Zoek in de ruwe HTML naar bekende URL-patronen
-  for (const { re, base } of LISTING_PATTERNS) {
-    const m = html.match(re);
-    if (m) {
-      const raw = m[0].replace(/['">\s].*/,'');
-      return raw.startsWith('http') ? raw : `${base}/${raw.replace(/^\//, '')}`;
-    }
-  }
-
-  // Fallback: alle <a href> links langs gaan
-  const $ = cheerio.load(html);
-  let found = null;
-  $('a[href]').each((_, el) => {
-    if (found) return;
-    const href = $(el).attr('href') ?? '';
-    for (const { re, base } of LISTING_PATTERNS) {
-      if (re.test(href)) {
-        found = href.startsWith('http') ? href : `${base}${href}`;
-        return;
-      }
-    }
-  });
-  return found;
+// ── Adres ontleden ─────────────────────────────────────────────────────────────
+function parseAddress(address) {
+  const m = address.trim().match(/^(.+?)\s+(\d+[a-zA-Z]?(?:-\d+)?)\s*,?\s+(.+)$/);
+  if (!m) return null;
+  return { street: m[1].trim(), number: m[2].trim(), city: m[3].trim() };
 }
 
-// DuckDuckGo HTML zoeken — geen JavaScript nodig, pikt alle platforms op
-async function searchListingOnline(address) {
-  const key = process.env.SCRAPER_API_KEY;
-  if (!key) return null;
+function toSlug(s) {
+  return (s ?? '')
+    .toLowerCase()
+    .replace(/[àáâãä]/g, 'a').replace(/ç/g, 'c').replace(/[èéêë]/g, 'e')
+    .replace(/[ìíîï]/g, 'i').replace(/[òóôõö]/g, 'o').replace(/[ùúûü]/g, 'u')
+    .replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+}
 
-  // Zoek op adres + "te koop" — DuckDuckGo HTML geeft resultaten van alle sites
-  const query = `"${address}" te koop`;
-  const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&kl=nl-nl`;
+// ── Funda __NEXT_DATA__ checken op geldige listing ────────────────────────────
+function deepFind(obj, keys, depth = 0) {
+  if (depth > 12 || !obj || typeof obj !== 'object') return null;
+  for (const k of keys) if (obj[k] != null && obj[k] !== '') return obj[k];
+  for (const v of Object.values(obj)) {
+    const f = deepFind(v, keys, depth + 1);
+    if (f != null) return f;
+  }
+  return null;
+}
 
+function hasValidListing(html) {
   try {
-    const { data: html } = await axios.get(
-      `http://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(searchUrl)}&render=false&country_code=nl`,
-      { timeout: 8000 }
+    const raw = cheerio.load(html)('script#__NEXT_DATA__').html();
+    if (!raw) return false;
+    const json = JSON.parse(raw);
+    const price = deepFind(json, ['sellingPrice', 'koopprijs', 'askingPrice', 'price']);
+    return typeof price === 'number' && price > 0;
+  } catch { return false; }
+}
+
+// ── Één URL ophalen via ScraperAPI (render=false, snel) ───────────────────────
+async function tryUrl(url, key) {
+  try {
+    const { data } = await axios.get(
+      `http://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}&render=false&country_code=nl`,
+      { timeout: 7000 }
     );
-
-    // Zoek eerst in DuckDuckGo resultaat-URLs
-    const $ = cheerio.load(html);
-    let found = null;
-
-    // DuckDuckGo stopt de echte URL in data-href of href van .result__url / .result__a
-    $('a.result__a, a[data-href], .result__url').each((_, el) => {
-      if (found) return;
-      const href = $(el).attr('href') ?? $(el).attr('data-href') ?? $(el).text() ?? '';
-      for (const { re, base } of LISTING_PATTERNS) {
-        if (re.test(href)) {
-          const m = href.match(re);
-          if (m) {
-            found = href.startsWith('http') ? href.match(/https?:\/\/[^\s"'>]+/)?.[0] : `${base}/${m[0]}`;
-            return;
-          }
-        }
-      }
-    });
-    if (found) return found;
-
-    // Fallback: zoek in de volledige HTML-tekst
-    return extractListingUrl(html);
+    return hasValidListing(data) ? url : null;
   } catch { return null; }
 }
 
-// ── Hoofd-handler ──────────────────────────────────────────────────────────────
+// ── Kandidaat-URLs bouwen voor Funda en Pararius ───────────────────────────────
+function buildCandidateUrls(street, number, city) {
+  const s = toSlug(street);
+  const c = toSlug(city);
+  const n = number.toLowerCase();
+
+  const fundaTypes = ['huis', 'appartement', 'woonhuis', 'studio', 'kamer', 'villa'];
+  const funda = fundaTypes.map(t => `https://www.funda.nl/detail/koop/${c}/${t}-${s}-${n}/`);
+
+  const pararius = [
+    `https://www.pararius.nl/huis-te-koop/${c}/${s}-${n}`,
+    `https://www.pararius.nl/appartement-te-koop/${c}/${s}-${n}`,
+  ];
+
+  return [...funda, ...pararius];
+}
+
+// ── Funda zoekpagina als fallback (render=true) ────────────────────────────────
+async function searchFundaPage(address, key) {
+  const query = encodeURIComponent(address);
+  const url = `https://www.funda.nl/zoeken/koop?selected_area=%5B%22nl%22%5D&query=${query}`;
+  try {
+    const { data: html } = await axios.get(
+      `http://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}&render=true&country_code=nl`,
+      { timeout: 12000 }
+    );
+    // Zoek links naar detail-pagina's
+    const $ = cheerio.load(html);
+    let found = null;
+    $('a[href*="/detail/koop/"]').each((_, el) => {
+      if (!found) {
+        const href = $(el).attr('href') ?? '';
+        if (href.includes('/detail/koop/')) {
+          found = href.startsWith('http') ? href : `https://www.funda.nl${href}`;
+        }
+      }
+    });
+    return found;
+  } catch { return null; }
+}
+
+// ── Hoofd-handler ─────────────────────────────────────────────────────────────
 export async function POST(request) {
   try {
     const { address } = await request.json();
     if (!address) return Response.json({ error: 'Geen adres opgegeven' }, { status: 400 });
 
-    // Zoek op alle vastgoedplatforms via DuckDuckGo
-    const listingUrl = await searchListingOnline(address);
+    const key = process.env.SCRAPER_API_KEY;
+    if (!key) return Response.json({ error: 'ScraperAPI niet geconfigureerd' }, { status: 500 });
+
+    const parsed = parseAddress(address);
+    let listingUrl = null;
+
+    if (parsed) {
+      // Stap 1: alle kandidaat-URLs parallel proberen (render=false, snel)
+      const candidates = buildCandidateUrls(parsed.street, parsed.number, parsed.city);
+      const results = await Promise.all(candidates.map(u => tryUrl(u, key)));
+      listingUrl = results.find(r => r != null) ?? null;
+    }
+
+    // Stap 2: fallback — Funda zoekpagina met render=true
+    if (!listingUrl) {
+      listingUrl = await searchFundaPage(address, key);
+    }
 
     if (listingUrl) {
-      // Gevonden — stuur door naar de analyze route intern
+      // Gevonden — volledige analyse uitvoeren
       const analyzeRes = await fetch(new URL('/api/analyze', request.url), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,9 +124,8 @@ export async function POST(request) {
       return Response.json({ ...data, found_listing: listingUrl });
     }
 
-    // Niet gevonden — geef terug dat er geen actieve listing is
     return Response.json({
-      error: `Geen actieve listing gevonden voor "${address}" op Funda, Pararius, Jaap of andere platforms. Voer een directe URL in als de woning wel te koop staat.`,
+      error: `Geen actieve listing gevonden voor "${address}" op Funda of Pararius. Voer een directe URL in als de woning wel te koop staat.`,
       address_not_listed: true,
     }, { status: 404 });
 
