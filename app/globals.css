@@ -109,8 +109,8 @@ body {
 /* ── Kadaster grid ───────────────────────────────────────────────────────── */
 .kad-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 12px 0; }
 .kad-box  { background: rgba(255,255,255,0.75); border: 1px solid rgba(100,160,255,0.15); border-radius: 8px; padding: 11px 13px; }
-.kad-box.warn { background: rgba(45,30,5,0.8); border-color: rgba(245,160,32,0.3); }
-.kad-box.blue { background: rgba(13,34,72,0.8); border-color: rgba(43,127,255,0.3); }
+.kad-box.warn { background: #FFFBEB; border-color: rgba(161,98,7,0.25); }
+.kad-box.blue { background: #EBF2FF; border-color: rgba(26,86,219,0.25); }
 .kad-lbl  { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-3); margin-bottom: 5px; }
 .kad-val  { font-size: 14px; font-weight: 700; color: var(--text-1); font-variant-numeric: tabular-nums; }
 .kad-val.warn { color: var(--amber); }

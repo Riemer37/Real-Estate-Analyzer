@@ -196,7 +196,7 @@ export default function Dashboard() {
           <div style={{ padding: '80px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.14em', color: '#7A8FA6' }}>Analyse bezig</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#0B1829', letterSpacing: '-.3px' }}>Woning verwerken</div>
-            <div style={{ fontSize: 11, color: '#A8BACE', maxWidth: 380, textAlign: 'center', wordBreak: 'break-all' }}>{url.slice(0, 70)}{url.length > 70 ? '…' : ''}</div>
+            <div style={{ fontSize: 11, color: '#6A8AAA', maxWidth: 380, textAlign: 'center', wordBreak: 'break-all' }}>{url.slice(0, 70)}{url.length > 70 ? '…' : ''}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: 400 }}>
               {activeSteps.map((s, j) => {
                 const cls = j < step ? 'ok' : j === step ? 'on' : '';
@@ -242,8 +242,8 @@ export default function Dashboard() {
                 <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#fff', color: '#1C1C1E', border: '1px solid #E4E4E7', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>PDF exporteren</button>
                 <button onClick={saveProperty} style={{ padding: '8px 16px', background: '#1C1C1E', color: '#FAFAFA', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Opslaan</button>
                 <div className="score-wrap">
-                  <div style={{ fontSize: 9, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '.1em' }}>Score</div>
-                  <div className="score-num" style={{ color: scCol }}>{sc}<span style={{ fontSize: 14, color: '#C0BDB8', fontWeight: 400 }}>/10</span></div>
+                  <div style={{ fontSize: 9, color: '#6A8AAA', textTransform: 'uppercase', letterSpacing: '.1em' }}>Score</div>
+                  <div className="score-num" style={{ color: scCol }}>{sc}<span style={{ fontSize: 14, color: '#6A8AAA', fontWeight: 400 }}>/10</span></div>
                   <div className="score-lbl" style={{ color: scCol }}>{scLabel}</div>
                 </div>
               </div>
@@ -281,7 +281,7 @@ export default function Dashboard() {
           </>
         )}
 
-        <div style={{ textAlign: 'center', fontSize: 10, color: '#A8BACE', padding: '20px 0 8px', borderTop: '1px solid #DDE3ED', marginTop: 8 }}>
+        <div style={{ textAlign: 'center', fontSize: 10, color: '#6A8AAA', padding: '20px 0 8px', borderTop: '1px solid #DDE3ED', marginTop: 8 }}>
           VastgoedAI · PDOK Kadaster BAG · Claude AI (Anthropic) · {new Date().getFullYear()}
         </div>
       </main>

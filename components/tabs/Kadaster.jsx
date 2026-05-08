@@ -75,7 +75,7 @@ export default function Kadaster({ d }) {
             {/* WOZ-waarden */}
             {kad.woz_waarden?.length > 0 && (
               <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#6A8AAA', marginBottom: 8 }}>
                   WOZ-waarden (Gemeente) &nbsp;
                   <a href="https://www.wozwaardeloket.nl" target="_blank" rel="noreferrer" style={{ color: '#60A5FA', fontWeight: 400 }}>WOZ-loket ↗</a>
                 </div>
@@ -99,10 +99,10 @@ export default function Kadaster({ d }) {
             {/* Energielabel */}
             {kad.energy_label && (
               <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>Energielabel (EP-online / RVO)</div>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#6A8AAA', marginBottom: 8 }}>Energielabel (EP-online / RVO)</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span className={`eb eb-${kad.energy_label}`} style={{ fontSize: 18, padding: '4px 14px' }}>{kad.energy_label}</span>
-                  <span style={{ fontSize: 12, color: '#A1A1AA' }}>
+                  <span style={{ fontSize: 12, color: '#6A8AAA' }}>
                     Geregistreerd energielabel{kad.energy_label_datum ? ` · ${kad.energy_label_datum}` : ''}
                   </span>
                 </div>
@@ -112,7 +112,7 @@ export default function Kadaster({ d }) {
             {/* Koopsommen */}
             {kad.koopsommen?.length > 0 && (
               <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>Historische transactieprijzen (Kadaster)</div>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#6A8AAA', marginBottom: 8 }}>Historische transactieprijzen (Kadaster)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
                   {kad.koopsommen.slice(0, 3).map((k, i) => (
                     <div key={i} className="kad-box">
@@ -134,7 +134,7 @@ export default function Kadaster({ d }) {
             {/* Eenheden per VBO bij gesplitst pand */}
             {kad.is_split && kad.vbo_eenheden?.length > 0 && (
               <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#C0BDB8', marginBottom: 8 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#6A8AAA', marginBottom: 8 }}>
                   Oppervlakte per eenheid ({kad.vbo_count} VBO's in dit pand)
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
@@ -205,7 +205,7 @@ export default function Kadaster({ d }) {
         </div>
 
         {compsLoading && (
-          <div style={{ padding: '18px 0', textAlign: 'center', fontSize: 12, color: '#A1A1AA' }}>
+          <div style={{ padding: '18px 0', textAlign: 'center', fontSize: 12, color: '#6A8AAA' }}>
             Recente verkopen ophalen…
           </div>
         )}
