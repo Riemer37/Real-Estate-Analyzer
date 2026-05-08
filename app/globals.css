@@ -36,7 +36,8 @@ body {
   background-image:
     linear-gradient(rgba(8,18,35,0.42), rgba(8,18,35,0.42)),
     url('https://www.uniekestickers.nl/images/stories/virtuemart/product/Fotobehang%20Domtoren%201429809320.jpg');
-  background-size: cover;
+  background-size: contain;
+  background-repeat: no-repeat;
   background-position: center center;
   background-attachment: fixed;
 }
