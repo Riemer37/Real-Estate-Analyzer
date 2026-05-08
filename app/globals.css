@@ -34,10 +34,10 @@ body {
   font-size: 14px;
   background-color: #0A1628;
   background-image:
-    linear-gradient(rgba(8,18,35,0.72), rgba(8,18,35,0.72)),
+    linear-gradient(rgba(8,18,35,0.42), rgba(8,18,35,0.42)),
     url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/DomTorenUtrechtNederland.jpg/1280px-DomTorenUtrechtNederland.jpg');
   background-size: cover;
-  background-position: center top;
+  background-position: center center;
   background-attachment: fixed;
 }
 
