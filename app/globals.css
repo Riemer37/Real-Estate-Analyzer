@@ -49,7 +49,7 @@ body {
 .sb-section{ font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--text-3); margin: 12px 0 8px; }
 
 /* ── Hero ────────────────────────────────────────────────────────────────── */
-.hero         { position: relative; border-radius: 12px; overflow: hidden; height: 240px; background: rgba(10,20,38,0.55); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); margin-bottom: 20px; border: 1px solid rgba(43,127,255,0.15); }
+.hero         { position: relative; border-radius: 12px; overflow: hidden; height: 240px; background: rgba(255,255,255,0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); margin-bottom: 20px; border: 1px solid rgba(100,160,255,0.18); }
 .hero-img     { display: none; }
 .hero-content { position: relative; z-index: 2; padding: 36px 40px; height: 100%; display: flex; flex-direction: column; justify-content: center; }
 .hero-title   { font-size: 30px; font-weight: 700; color: var(--text-1); letter-spacing: -.5px; line-height: 1.15; margin-bottom: 10px; }
