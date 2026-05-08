@@ -230,38 +230,38 @@ export default function Kadaster({ d }) {
           return (
             <>
               {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '6px 10px', borderBottom: '1px solid #1A3352', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#3D5A78' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '6px 10px', borderBottom: '1px solid rgba(0,60,140,0.12)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#6A8AAA' }}>
                 {['Adres','Datum','Verkoopprijs','m²','€/m²','Label','Kms','vs object'].map((h, i) => (
                   <div key={h} style={{ textAlign: i > 0 ? 'right' : 'left' }}>{h}</div>
                 ))}
               </div>
 
               {/* Subject row */}
-              <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '8px 10px', background: '#0D2248', border: '1px solid #1A3A6A', borderRadius: 7, margin: '4px 0', fontSize: 12 }}>
-                <div style={{ fontWeight: 600, color: '#2B7FFF' }}>{d.address}</div>
-                <div style={{ textAlign: 'right', color: '#3D5A78' }}>Nu</div>
-                <div style={{ textAlign: 'right', fontWeight: 700, color: '#2B7FFF' }}>{fmt(d.price)}</div>
-                <div style={{ textAlign: 'right', color: '#DCE8F5' }}>{d.sqm}</div>
-                <div style={{ textAlign: 'right', fontWeight: 700, color: '#2B7FFF' }}>{fmt(subjectPpm)}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '8px 10px', background: '#EBF2FF', border: '1px solid #BFDBFE', borderRadius: 7, margin: '4px 0', fontSize: 12 }}>
+                <div style={{ fontWeight: 600, color: '#1A56DB' }}>{d.address}</div>
+                <div style={{ textAlign: 'right', color: '#6A8AAA' }}>Nu</div>
+                <div style={{ textAlign: 'right', fontWeight: 700, color: '#1A56DB' }}>{fmt(d.price)}</div>
+                <div style={{ textAlign: 'right', color: '#0B1829' }}>{d.sqm}</div>
+                <div style={{ textAlign: 'right', fontWeight: 700, color: '#1A56DB' }}>{fmt(subjectPpm)}</div>
                 <div style={{ textAlign: 'right' }}><span className={`eb eb-${d.energy}`}>{d.energy}</span></div>
-                <div style={{ textAlign: 'right', color: '#6A8AAA' }}>{d.rooms}</div>
-                <div style={{ textAlign: 'right', color: '#3D5A78' }}>—</div>
+                <div style={{ textAlign: 'right', color: '#3D5570' }}>{d.rooms}</div>
+                <div style={{ textAlign: 'right', color: '#6A8AAA' }}>—</div>
               </div>
 
               {/* Comp rows */}
               {validComps.map((c, i) => {
                 const cppm    = c.sqm > 0 ? Math.floor(c.price / c.sqm) : null;
                 const diff    = cppm != null ? cppm - subjectPpm : null;
-                const diffCol = diff == null ? '#3D5A78' : diff > 0 ? '#0EB876' : '#FF5252';
+                const diffCol = diff == null ? '#6A8AAA' : diff > 0 ? '#0A7A4F' : '#B91C1C';
                 return (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '8px 10px', borderBottom: '1px solid #152840', fontSize: 12 }}>
-                    <div style={{ color: '#6A8AAA', fontSize: 11 }}>{c.address}</div>
-                    <div style={{ textAlign: 'right', color: '#3D5A78', fontSize: 11 }}>{c.datum ? c.datum.slice(0,7) : '—'}</div>
-                    <div style={{ textAlign: 'right', color: '#DCE8F5', fontWeight: 500 }}>{fmt(c.price)}</div>
-                    <div style={{ textAlign: 'right', color: '#6A8AAA' }}>{c.sqm ?? '—'}</div>
-                    <div style={{ textAlign: 'right', color: '#DCE8F5', fontWeight: 500 }}>{cppm ? fmt(cppm) : '—'}</div>
-                    <div style={{ textAlign: 'right' }}>{c.energy ? <span className={`eb eb-${c.energy}`}>{c.energy}</span> : <span style={{ color: '#3D5A78' }}>—</span>}</div>
-                    <div style={{ textAlign: 'right', color: '#6A8AAA' }}>{c.rooms ?? '—'}</div>
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '8px 10px', borderBottom: '1px solid rgba(0,60,140,0.08)', fontSize: 12 }}>
+                    <div style={{ color: '#3D5570', fontSize: 11 }}>{c.address}</div>
+                    <div style={{ textAlign: 'right', color: '#6A8AAA', fontSize: 11 }}>{c.datum ? c.datum.slice(0,7) : '—'}</div>
+                    <div style={{ textAlign: 'right', color: '#0B1829', fontWeight: 500 }}>{fmt(c.price)}</div>
+                    <div style={{ textAlign: 'right', color: '#3D5570' }}>{c.sqm ?? '—'}</div>
+                    <div style={{ textAlign: 'right', color: '#0B1829', fontWeight: 500 }}>{cppm ? fmt(cppm) : '—'}</div>
+                    <div style={{ textAlign: 'right' }}>{c.energy ? <span className={`eb eb-${c.energy}`}>{c.energy}</span> : <span style={{ color: '#6A8AAA' }}>—</span>}</div>
+                    <div style={{ textAlign: 'right', color: '#3D5570' }}>{c.rooms ?? '—'}</div>
                     <div style={{ textAlign: 'right', fontWeight: 700, color: diffCol }}>{diff == null ? '—' : (diff > 0 ? '+' : '') + fmt(diff)}</div>
                   </div>
                 );
@@ -274,7 +274,7 @@ export default function Kadaster({ d }) {
                   {da < 0 ? ' — potentieel voordeel.' : ' — vraagprijs aan de hoge kant.'}
                 </div>
               )}
-              <div style={{ fontSize: 10, color: '#2A3F55', marginTop: 6 }}>
+              <div style={{ fontSize: 10, color: '#6A8AAA', marginTop: 6 }}>
                 {compsSource === 'funda' ? 'Bron: Funda verkocht — werkelijke transacties' : 'Bron: AI-inschatting — indicatief'}
               </div>
             </>

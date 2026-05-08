@@ -1,7 +1,7 @@
 'use client';
 
-const SCORE_COLOR = s => s >= 7 ? '#0EB876' : s >= 4 ? '#F5A020' : '#FF5252';
-const SCORE_BG    = s => s >= 7 ? '#0A2A1A' : s >= 4 ? '#2D1E05' : '#2D0C0C';
+const SCORE_COLOR = s => s >= 7 ? '#0A7A4F' : s >= 4 ? '#A16207' : '#B91C1C';
+const SCORE_BG    = s => s >= 7 ? '#D1FAE5' : s >= 4 ? '#FEF3C7' : '#FEE2E2';
 const SCORE_LABEL = s => s >= 7 ? 'Kansrijk' : s >= 4 ? 'Mogelijk' : 'Lastig';
 
 function ScoreBar({ score }) {
@@ -9,7 +9,7 @@ function ScoreBar({ score }) {
   const col = SCORE_COLOR(score);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-      <div style={{ flex: 1, height: 4, background: '#1A3352', borderRadius: 99, overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: 4, background: '#DDE8F0', borderRadius: 99, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: col, borderRadius: 99, transition: 'width .4s ease' }} />
       </div>
       <span style={{ fontSize: 11, fontWeight: 700, color: col, minWidth: 28 }}>{score}/10</span>
@@ -19,62 +19,49 @@ function ScoreBar({ score }) {
 
 function KansCard({ titel, score, toelichting }) {
   return (
-    <div style={{ background: '#0F2035', border: '1px solid #1A3352', borderRadius: 10, padding: '16px 18px', borderLeft: `3px solid ${SCORE_COLOR(score)}` }}>
+    <div style={{ background: 'rgba(255,255,255,0.70)', border: '1px solid rgba(0,60,140,0.12)', borderRadius: 10, padding: '16px 18px', borderLeft: `3px solid ${SCORE_COLOR(score)}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: '#DCE8F5' }}>{titel}</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: '#0B1829' }}>{titel}</div>
         <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 9px', borderRadius: 99, background: SCORE_BG(score), color: SCORE_COLOR(score), letterSpacing: '.04em', textTransform: 'uppercase' }}>
           {SCORE_LABEL(score)}
         </span>
       </div>
       <ScoreBar score={score} />
-      {toelichting && (
-        <div style={{ marginTop: 10, fontSize: 12, color: '#6A8AAA', lineHeight: 1.7 }}>{toelichting}</div>
-      )}
+      {toelichting && <div style={{ marginTop: 10, fontSize: 12, color: '#3D5570', lineHeight: 1.7 }}>{toelichting}</div>}
     </div>
   );
 }
 
 export default function Potentieel({ d }) {
   const p = d.potentieel;
-
-  if (!p) {
-    return (
-      <div className="card">
-        <div className="card-title">Transformatiepotentieel</div>
-        <div className="note note-n">Transformatiedata kon niet worden berekend. Analyseer opnieuw voor een volledig resultaat.</div>
-      </div>
-    );
-  }
+  if (!p) return (
+    <div className="card">
+      <div className="card-title">Transformatiepotentieel</div>
+      <div className="note note-n">Transformatiedata kon niet worden berekend.</div>
+    </div>
+  );
 
   const kad = d.kadaster ?? {};
-  const strictCol = { Streng: '#FF5252', Gemiddeld: '#F5A020', Soepel: '#0EB876' };
-  const strictBg  = { Streng: '#2D0C0C', Gemiddeld: '#2D1E05', Soepel: '#0A2A1A' };
+  const strictCol = { Streng: '#B91C1C', Gemiddeld: '#A16207', Soepel: '#0A7A4F' };
+  const strictBg  = { Streng: '#FEE2E2', Gemiddeld: '#FEF3C7', Soepel: '#D1FAE5' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
       <div className="card">
         <div className="card-title">
           Gemeentelijk beleid — {kad.gemeentenaam ?? d.address?.split(',').pop()?.trim() ?? '—'}
-          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: strictBg[p.gemeente_strictheid] ?? '#0F2035', color: strictCol[p.gemeente_strictheid] ?? '#6A8AAA', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 10px', borderRadius: 99, background: strictBg[p.gemeente_strictheid] ?? '#F9FAFB', color: strictCol[p.gemeente_strictheid] ?? '#374151', textTransform: 'uppercase', letterSpacing: '.04em' }}>
             {p.gemeente_strictheid}
           </span>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
-          {[
-            ['Gemeente',        kad.gemeentenaam ?? '—'],
-            ['Buurt',           kad.buurtnaam ?? '—'],
-            ['Wijk',            kad.wijknaam ?? '—'],
-            ['Bestemmingsplan', p.bestemmingsplan_type],
-          ].map(([k, v]) => (
-            <div key={k} style={{ background: '#0F2035', border: '1px solid #152840', borderRadius: 8, padding: '10px 13px' }}>
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#3D5A78', marginBottom: 4 }}>{k}</div>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#DCE8F5' }}>{v}</div>
+          {[['Gemeente', kad.gemeentenaam ?? '—'], ['Buurt', kad.buurtnaam ?? '—'], ['Wijk', kad.wijknaam ?? '—'], ['Bestemmingsplan', p.bestemmingsplan_type]].map(([k, v]) => (
+            <div key={k} style={{ background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(0,60,140,0.10)', borderRadius: 8, padding: '10px 13px' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#6A8AAA', marginBottom: 4 }}>{k}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#0B1829' }}>{v}</div>
             </div>
           ))}
         </div>
-
         {p.gemeente_beleid && <div className="note note-n">{p.gemeente_beleid}</div>}
       </div>
 
@@ -91,7 +78,7 @@ export default function Potentieel({ d }) {
       {p.advies && (
         <div className="card">
           <div className="card-title">Transformatieadvies</div>
-          <div style={{ fontSize: 13, color: '#6A8AAA', lineHeight: 1.85 }}>{p.advies}</div>
+          <div style={{ fontSize: 13, color: '#3D5570', lineHeight: 1.85 }}>{p.advies}</div>
         </div>
       )}
     </div>
