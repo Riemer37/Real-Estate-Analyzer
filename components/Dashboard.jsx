@@ -212,7 +212,7 @@ export default function Dashboard() {
 
         {!loading && !data && (
           <>
-            <div className="hero"><div className="hero-img" /><div className="hero-content"><div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.18em', color: '#4A6080', marginBottom: 10 }}>Vastgoed Investment Platform</div><div className="hero-title">Investeringsanalyse<br />in seconden.</div><div className="hero-desc">Plak een woninglink of typ een adres voor een compleet investeringsdossier — Kadasterdata, risicoscore, vergelijkbare verkopen en exitstrategie.</div></div></div>
+            <div className="hero"><div className="hero-img" /><div className="hero-content"><div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.18em', color: '#2B7FFF', marginBottom: 10 }}>Vastgoed Investment Platform</div><div className="hero-title">Investeringsanalyse<br />in seconden.</div><div className="hero-desc">Plak een woninglink of typ een adres voor een compleet investeringsdossier — Kadasterdata, risicoscore, vergelijkbare verkopen en exitstrategie.</div></div></div>
             <div className="feat-row">
               {[['Woningdata','Prijs, m², energielabel en staat automatisch opgehaald uit elke listing.'],['Kadaster BAG','Officiële splitsingstatus, oppervlakte, bouwjaar en gebruik via PDOK API.'],['Risicoanalyse','Locatie-, staat-, markt- en liquiditeitsrisico met een totaalscore.'],['Exitstrategie','Volledig verkoop- of verhuur-ROI met gezonde marge en terugverdientijd.']].map(([name, txt]) => (
                 <div className="feat" key={name}><div className="feat-name">{name}</div><div className="feat-txt">{txt}</div></div>

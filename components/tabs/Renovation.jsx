@@ -16,14 +16,20 @@ export default function Renovation({ d, totalAcq, onUpdate }) {
       <div className="card">
         <div className="card-title">Renovatiescope</div>
         <div className="note note-b" style={{ marginBottom: 12 }}>{d.reno_items}</div>
-        <label style={{ fontSize: 12, color: '#71717A' }}>Renovatiebudget (€)</label>
-        <input type="number" value={reno} step={1000} onChange={e => setReno(+e.target.value)} style={{ width: '100%', padding: '6px 8px', border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, margin: '6px 0 12px' }} />
+
+        <label style={{ fontSize: 11, color: '#6A8AAA' }}>Renovatiebudget (€)</label>
+        <input
+          type="number" value={reno} step={1000}
+          onChange={e => setReno(+e.target.value)}
+          style={{ width: '100%', padding: '6px 8px', border: '1px solid #1A3352', borderRadius: 7, fontSize: 13, margin: '6px 0 14px', background: '#0F2035', color: '#DCE8F5', outline: 'none', fontFamily: 'Inter, sans-serif' }}
+        />
+
         {[
-          ['Renovatiekosten',                    fmt(reno),                                    '#1C1C1E'],
-          ['Kosten per m²',                      fmt(Math.floor(reno / Math.max(d.sqm, 1))) + '/m²', '#1C1C1E'],
-          ['Geschatte waardestijging',           '+' + fmt(uplift),                            '#15803D'],
-          [`Gezonde marge (${d.healthy_margin}%)`, fmt(healthyMin),                            '#6D28D9'],
-          ['Totaal geïnvesteerd',                fmt(totalAcq + reno),                         '#1D4ED8'],
+          ['Renovatiekosten',                    fmt(reno),                                         '#DCE8F5'],
+          ['Kosten per m²',                      fmt(Math.floor(reno / Math.max(d.sqm, 1))) + '/m²','#6A8AAA'],
+          ['Geschatte waardestijging',           '+' + fmt(uplift),                                 '#0EB876'],
+          [`Gezonde marge (${d.healthy_margin}%)`, fmt(healthyMin),                                 '#A78BFA'],
+          ['Totaal geïnvesteerd',                fmt(totalAcq + reno),                              '#2B7FFF'],
         ].map(([k, v, col]) => (
           <div className="row" key={k}><span className="rk">{k}</span><span className="rv" style={{ color: col }}>{v}</span></div>
         ))}
@@ -39,17 +45,17 @@ export default function Renovation({ d, totalAcq, onUpdate }) {
           const splitProfit = splitTotal - (totalAcq + reno + splitCost);
           return (
             <>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#1C1C1E', marginBottom: 10 }}>Scenario: splitsing in 2 eenheden</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#DCE8F5', marginBottom: 12 }}>Scenario: splitsing in 2 eenheden</div>
               {[
-                [`Eenheid A (~${Math.floor(d.sqm * 0.55)}m²)`, fmt(u1v)],
-                [`Eenheid B (~${Math.floor(d.sqm * 0.45)}m²)`, fmt(u2v)],
-                ['Splitsingskosten',   fmt(splitCost)],
-                ['Gecombineerde waarde', fmt(splitTotal)],
-                ['Splitsingswinst',    fmt(splitProfit)],
-              ].map(([k, v]) => (
+                [`Eenheid A (~${Math.floor(d.sqm * 0.55)}m²)`, fmt(u1v),        '#DCE8F5'],
+                [`Eenheid B (~${Math.floor(d.sqm * 0.45)}m²)`, fmt(u2v),        '#DCE8F5'],
+                ['Splitsingskosten',                            fmt(splitCost),  '#6A8AAA'],
+                ['Gecombineerde waarde',                        fmt(splitTotal), '#2B7FFF'],
+                ['Splitsingswinst',                             fmt(splitProfit), splitProfit > 0 ? '#0EB876' : '#FF5252'],
+              ].map(([k, v, c]) => (
                 <div className="row" key={k}>
                   <span className="rk">{k}</span>
-                  <span className="rv" style={{ color: k.toLowerCase().includes('winst') ? '#15803D' : '#1C1C1E' }}>{v}</span>
+                  <span className="rv" style={{ color: c }}>{v}</span>
                 </div>
               ))}
               <div className={`note ${splitProfit > (postReno - totalAcq - reno) ? 'note-g' : 'note-y'}`} style={{ marginTop: 10 }}>
