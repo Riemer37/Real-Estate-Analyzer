@@ -127,25 +127,41 @@ export default function Dashboard() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
-      <aside style={{ width: 220, background: '#18181B', borderRight: '1px solid #27272A', padding: '24px 16px', flexShrink: 0, position: 'fixed', top: 0, left: 0, height: '100vh', overflowY: 'auto' }}>
-        <div className="logo">Vastgoed</div>
-        <div className="logo-sub">Investment Platform</div>
+      <aside style={{ width: 224, background: '#0B1829', borderRight: '1px solid #1C3150', padding: '22px 14px', flexShrink: 0, position: 'fixed', top: 0, left: 0, height: '100vh', overflowY: 'auto' }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 18 }}>
+          <div style={{ width: 30, height: 30, background: '#1A56DB', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12L6 7L9 10L13 4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </div>
+          <div>
+            <div className="logo">VastgoedAI</div>
+            <div className="logo-sub">Investment Platform</div>
+          </div>
+        </div>
+
         <div className="sb-div" />
+
+        {/* Input */}
+        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: '#3D5570', marginBottom: 6 }}>Analyse</div>
         <input
           value={url}
           onChange={e => setUrl(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && analyze()}
-          placeholder="URL of adres (bijv. Hoofdstraat 1, Amsterdam)…"
-          style={{ width: '100%', padding: '8px 10px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, marginBottom: 6, outline: 'none' }}
+          placeholder="URL of adres…"
+          style={{ width: '100%', padding: '8px 10px', background: '#132135', border: '1px solid #1C3150', borderRadius: 7, color: '#CBD5E1', fontSize: 12, marginBottom: 6, outline: 'none', fontFamily: 'Inter, sans-serif' }}
         />
-        <button onClick={analyze} style={{ width: '100%', padding: '8px 12px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#F4F4F5', fontSize: 12, cursor: 'pointer' }}>
-          Woning analyseren →
+        <button
+          onClick={analyze}
+          disabled={loading}
+          style={{ width: '100%', padding: '9px 12px', background: '#1A56DB', border: 'none', borderRadius: 7, color: '#fff', fontSize: 12, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .6 : 1, letterSpacing: '.01em' }}>
+          {loading ? 'Analyseren…' : 'Woning analyseren →'}
         </button>
         {error && (
-          <div style={{ marginTop: 8, padding: '8px 10px', background: '#3F1212', border: '1px solid #7F1D1D', borderRadius: 8, fontSize: 11, color: '#FCA5A5', lineHeight: 1.5 }}>
+          <div style={{ marginTop: 8, padding: '8px 10px', background: '#3F1212', border: '1px solid #7F1D1D', borderRadius: 7, fontSize: 11, color: '#FCA5A5', lineHeight: 1.5 }}>
             {error}
           </div>
         )}
+
         {saved.length > 0 && (
           <>
             <div className="sb-div" />
@@ -159,38 +175,44 @@ export default function Dashboard() {
                     setTotalAcq(p.price * 1.115);
                     setRenoState({ reno: p.reno_cost, uplift: p.reno_cost * 0.7, healthyMin: (p.price * 1.115 + p.reno_cost) * (p.healthy_margin / 100) });
                   }}
-                  style={{ flex: 1, textAlign: 'left', padding: '8px 10px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#A1A1AA', fontSize: 11, cursor: 'pointer', lineHeight: 1.4 }}>
-                  {(p.address ?? '').slice(0, 22)}…<br />{fmt(p.price)}
+                  style={{ flex: 1, textAlign: 'left', padding: '8px 10px', background: '#132135', border: '1px solid #1C3150', borderRadius: 7, color: '#94A3B8', fontSize: 11, cursor: 'pointer', lineHeight: 1.5 }}>
+                  <div style={{ fontWeight: 600, color: '#CBD5E1', fontSize: 11 }}>{(p.address ?? '').slice(0, 24)}</div>
+                  <div style={{ color: '#4A6080', fontSize: 10, marginTop: 1 }}>{fmt(p.price)}</div>
                 </button>
-                <button onClick={() => removeProperty(i)} style={{ padding: '4px 7px', background: '#27272A', border: '1px solid #3F3F46', borderRadius: 8, color: '#71717A', fontSize: 11, cursor: 'pointer' }}>✕</button>
+                <button onClick={() => removeProperty(i)} style={{ padding: '4px 7px', background: '#132135', border: '1px solid #1C3150', borderRadius: 7, color: '#3D5570', fontSize: 11, cursor: 'pointer' }}>✕</button>
               </div>
             ))}
           </>
         )}
+
+        <div style={{ position: 'absolute', bottom: 16, left: 14, right: 14 }}>
+          <div style={{ fontSize: 9, color: '#253D57', textAlign: 'center', lineHeight: 1.6 }}>PDOK · Kadaster · Claude AI</div>
+        </div>
       </aside>
 
       {/* Main */}
-      <main style={{ marginLeft: 220, flex: 1, padding: 28, minWidth: 0 }}>
+      <main style={{ marginLeft: 224, flex: 1, padding: '24px 28px', minWidth: 0 }}>
         {loading && (
-          <div style={{ padding: '80px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22 }}>
-            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 24, color: '#1C1C1E' }}>Woning analyseren</div>
-            <div style={{ fontSize: 11, color: '#A1A1AA', maxWidth: 380, textAlign: 'center', wordBreak: 'break-all' }}>{url.slice(0, 70)}{url.length > 70 ? '…' : ''}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: 380 }}>
+          <div style={{ padding: '80px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.14em', color: '#7A8FA6' }}>Analyse bezig</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#0B1829', letterSpacing: '-.3px' }}>Woning verwerken</div>
+            <div style={{ fontSize: 11, color: '#A8BACE', maxWidth: 380, textAlign: 'center', wordBreak: 'break-all' }}>{url.slice(0, 70)}{url.length > 70 ? '…' : ''}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: 400 }}>
               {activeSteps.map((s, j) => {
                 const cls = j < step ? 'ok' : j === step ? 'on' : '';
                 const ic  = j < step ? '✓' : j === step ? '→' : '·';
                 return <div key={j} className={`ls ${cls}`}><div className={`ld ${cls}`} />{ic} {s}</div>;
               })}
             </div>
-            <div style={{ width: 380, height: 2, background: '#E4E4E7', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: '#1C1C1E', borderRadius: 2, width: `${(step + 1) / activeSteps.length * 100}%`, transition: 'width .5s ease' }} />
+            <div style={{ width: 400, height: 3, background: '#DDE3ED', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: '#1A56DB', borderRadius: 3, width: `${(step + 1) / activeSteps.length * 100}%`, transition: 'width .5s ease' }} />
             </div>
           </div>
         )}
 
         {!loading && !data && (
           <>
-            <div className="hero"><div className="hero-img" /><div className="hero-content"><div className="hero-title">Vastgoedinvestering,<br />analytisch gemaakt.</div><div className="hero-desc">Plak een woninglink of typ een adres voor een compleet investeringsdossier — Kadasterdata, risicoscore, vergelijkbare verkopen en exitstrategie.</div></div></div>
+            <div className="hero"><div className="hero-img" /><div className="hero-content"><div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.18em', color: '#4A6080', marginBottom: 10 }}>Vastgoed Investment Platform</div><div className="hero-title">Investeringsanalyse<br />in seconden.</div><div className="hero-desc">Plak een woninglink of typ een adres voor een compleet investeringsdossier — Kadasterdata, risicoscore, vergelijkbare verkopen en exitstrategie.</div></div></div>
             <div className="feat-row">
               {[['Woningdata','Prijs, m², energielabel en staat automatisch opgehaald uit elke listing.'],['Kadaster BAG','Officiële splitsingstatus, oppervlakte, bouwjaar en gebruik via PDOK API.'],['Risicoanalyse','Locatie-, staat-, markt- en liquiditeitsrisico met een totaalscore.'],['Exitstrategie','Volledig verkoop- of verhuur-ROI met gezonde marge en terugverdientijd.']].map(([name, txt]) => (
                 <div className="feat" key={name}><div className="feat-name">{name}</div><div className="feat-txt">{txt}</div></div>
@@ -228,7 +250,7 @@ export default function Dashboard() {
             </div>
 
             {/* KPI strip */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 8, marginBottom: 14 }}>
               {[
                 ['Vraagprijs',   fmt(data.price),            fmt(Math.floor(data.price / Math.max(data.sqm, 1))) + '/m²',                                                           'blue'],
                 ['Marktwaarde',  fmt(data.fair_value),       data.fair_value > data.price ? 'Boven vraagprijs' : 'Onder vraagprijs',                                                data.fair_value > data.price ? 'green' : 'amber'],
@@ -242,9 +264,9 @@ export default function Dashboard() {
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: 4, background: '#F4F4F5', borderRadius: 10, padding: 4, marginBottom: 16, width: 'fit-content' }}>
+            <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #DDE3ED', marginBottom: 16 }}>
               {TABS.map((t, i) => (
-                <button key={i} onClick={() => setActiveTab(i)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, background: activeTab === i ? '#fff' : 'transparent', color: activeTab === i ? '#1C1C1E' : '#71717A', boxShadow: activeTab === i ? '0 1px 3px rgba(0,0,0,.08)' : 'none' }}>
+                <button key={i} onClick={() => setActiveTab(i)} style={{ padding: '8px 16px', border: 'none', borderBottom: activeTab === i ? '2px solid #1A56DB' : '2px solid transparent', marginBottom: -2, cursor: 'pointer', fontSize: 12, fontWeight: activeTab === i ? 700 : 500, background: 'transparent', color: activeTab === i ? '#1A56DB' : '#7A8FA6', letterSpacing: '.01em', transition: 'color .15s' }}>
                   {t}
                 </button>
               ))}
@@ -259,8 +281,8 @@ export default function Dashboard() {
           </>
         )}
 
-        <div style={{ textAlign: 'center', fontSize: 11, color: '#C0BDB8', padding: '24px 0 8px' }}>
-          Vastgoed Investment Platform · PDOK Kadaster BAG · Claude AI · {new Date().getFullYear()}
+        <div style={{ textAlign: 'center', fontSize: 10, color: '#A8BACE', padding: '20px 0 8px', borderTop: '1px solid #DDE3ED', marginTop: 8 }}>
+          VastgoedAI · PDOK Kadaster BAG · Claude AI (Anthropic) · {new Date().getFullYear()}
         </div>
       </main>
     </div>
