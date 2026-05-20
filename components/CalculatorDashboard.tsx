@@ -6,6 +6,10 @@ import type { PropertyInput, KadasterInfo, EnergyLabel } from '@/lib/calc-types'
 import { fmtEUR } from '@/lib/calculations';
 import InputForm from '@/components/InputForm';
 import MaxBodTab from '@/components/calculators/MaxBodTab';
+import VerhuurTab from '@/components/calculators/VerhuurTab';
+import VerkoopTab from '@/components/calculators/VerkoopTab';
+import BelastingTab from '@/components/calculators/BelastingTab';
+import AIAnalyseTab from '@/components/calculators/AIAnalyseTab';
 
 // ── Tab definitions ────────────────────────────────────────────────────────────
 const TABS = [
@@ -14,6 +18,7 @@ const TABS = [
   { id: 2, label: 'Verhuur' },
   { id: 3, label: 'Verkoop' },
   { id: 4, label: 'Belasting' },
+  { id: 5, label: 'AI Analyse' },
 ];
 
 // ── Label pill ─────────────────────────────────────────────────────────────────
@@ -273,9 +278,10 @@ export default function CalculatorDashboard() {
             <div className="p-6 bg-background">
               {activeTab === 0 && <SamenvattingTab input={result.input} kad={result.kad} />}
               {activeTab === 1 && <MaxBodTab input={result.input} kad={result.kad} />}
-              {activeTab === 2 && <PlaceholderTab />}
-              {activeTab === 3 && <PlaceholderTab />}
-              {activeTab === 4 && <PlaceholderTab />}
+              {activeTab === 2 && <VerhuurTab input={result.input} kad={result.kad} />}
+              {activeTab === 3 && <VerkoopTab input={result.input} kad={result.kad} />}
+              {activeTab === 4 && <BelastingTab input={result.input} kad={result.kad} />}
+              {activeTab === 5 && <AIAnalyseTab input={result.input} kad={result.kad} />}
             </div>
           </>
         )}
