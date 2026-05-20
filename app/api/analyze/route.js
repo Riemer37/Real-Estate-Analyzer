@@ -59,13 +59,59 @@ function toNum(v) {
   return null;
 }
 
-// Regex fallback: extract living area from visible page text
+const SQM_LABEL_RE = /woonoppervlakte|woonopp|living\s*area|floor\s*area|usable\s*area/i;
+
+// Scan for { label, value } pair arrays — Funda often stores specs this way
+function sqmFromFeatures(obj, depth = 0) {
+  if (depth > 12 || !obj) return null;
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      if (item && typeof item === 'object') {
+        const label = String(item.label ?? item.name ?? item.title ?? item.key ?? '');
+        const value = item.value ?? item.data ?? item.content ?? item.formattedValue ?? '';
+        if (SQM_LABEL_RE.test(label)) {
+          const n = parseFloat(String(value).replace(/[^\d.]/g, ''));
+          if (isFinite(n) && n >= 10 && n <= 2000) return n;
+        }
+        const r = sqmFromFeatures(item, depth + 1);
+        if (r) return r;
+      }
+    }
+  } else if (typeof obj === 'object') {
+    for (const val of Object.values(obj)) {
+      const r = sqmFromFeatures(val, depth + 1);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+// JSON-LD schema.org extraction
+function sqmFromJsonLD($) {
+  let result = null;
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (result) return;
+    try {
+      const schemas = JSON.parse($(el).html() ?? '');
+      for (const s of (Array.isArray(schemas) ? schemas : [schemas])) {
+        const raw = s.floorSize ?? s.livingArea ?? s.floorspace ?? s.size;
+        if (!raw) continue;
+        const n = typeof raw === 'number' ? raw : parseFloat(String(raw?.value ?? raw).replace(/[^\d.]/g, ''));
+        if (isFinite(n) && n >= 10 && n <= 2000) { result = n; break; }
+      }
+    } catch { /* ignore */ }
+  });
+  return result;
+}
+
+// Regex fallback on visible page text
 function sqmFromText(text) {
   const patterns = [
     /woonoppervlakte[^\d]*(\d{2,4})\s*m[²2]/i,
     /woonopp(?:ervlakte)?[^\d]*(\d{2,4})/i,
     /living\s*area[^\d]*(\d{2,4})/i,
     /(\d{2,4})\s*m[²2]\s*(?:woon|living|gebruiks)/i,
+    /(\d{2,4})\s*m²/i,
   ];
   for (const re of patterns) {
     const m = text.match(re);
@@ -84,8 +130,8 @@ function extractStructured(html) {
     const priceRaw = deepFind(json, ['sellingPrice','koopprijs','askingPrice','listPrice','price']);
     const sqmRaw   = deepFind(json, [
       'livingArea','livingAreaSize','livingSpaceSize','netLivingArea','grossLivingArea',
-      'usableArea','floorArea','floorSize','objectSize','size',
-      'woonoppervlakte','oppervlakte','gebruiksoppervlakte','woonOppervlakte',
+      'usableArea','floorArea','floorSize','objectSize',
+      'woonoppervlakte','gebruiksoppervlakte','woonOppervlakte',
     ]);
     const yearRaw  = deepFind(json, ['constructionYear','bouwjaar','yearOfConstruction','yearBuilt','buildYear']);
     const energy   = deepFind(json, ['energyLabel','energyClass','energieklasse','energieLabelKlasse','energyLabelClass']);
@@ -102,13 +148,17 @@ function extractStructured(html) {
     if (erfp === true  || erfp === 'Ja'  || erfp === 'yes') erfpachtNorm = 'Ja';
     if (erfp === false || erfp === 'Nee' || erfp === 'no')  erfpachtNorm = 'Nee';
 
-    // Plain text for regex fallbacks (scripts stripped)
-    $('script, style').remove();
+    $('script[type="application/ld+json"]');  // keep ld+json before stripping
+    const ldSqm = sqmFromJsonLD($);
+
+    $('script:not([type="application/ld+json"]), style').remove();
     const pageText = $.text();
+
+    const sqm = toNum(sqmRaw) ?? sqmFromFeatures(json) ?? ldSqm ?? sqmFromText(pageText);
 
     const result = {
       price:    toNum(priceRaw),
-      sqm:      toNum(sqmRaw) ?? sqmFromText(pageText),
+      sqm,
       year:     toNum(yearRaw),
       energy:   energyNorm,
       rooms:    toNum(roomsRaw),
@@ -433,24 +483,22 @@ export async function POST(request) {
     const bestAddress = structured?.address || quickAddress;
 
     // ── PARALLEL FASE 2: AI analyse + Kadaster verfijnen (indien nodig) ────────
-    // Bij adres-modus: geef Kadaster-data als hints mee aan AI
-    const kadHints = isAddressMode && earlyKad?.found ? [
-      earlyKad.official_sqm  ? `KNOWN_SQM: ${earlyKad.official_sqm}`     : null,
-      earlyKad.official_year ? `KNOWN_YEAR: ${earlyKad.official_year}`    : null,
-      earlyKad.woz_huidig    ? `KNOWN_WOZ: ${earlyKad.woz_huidig}`       : null,
-      earlyKad.energy_label       ? `KNOWN_ENERGY: ${earlyKad.energy_label}`             : null,
-      earlyKad.official_address   ? `KNOWN_ADDRESS: ${earlyKad.official_address}`         : null,
-      earlyKad.perceel_oppervlakte ? `KNOWN_PERCEEL: ${earlyKad.perceel_oppervlakte}`     : null,
-    ].filter(Boolean).join('\n') : '';
-
-    const knownFacts = structured ? [
-      structured?.price  ? `KNOWN_PRICE: ${structured.price}`   : null,
-      structured.sqm     ? `KNOWN_SQM: ${structured.sqm}`       : null,
-      structured.year    ? `KNOWN_YEAR: ${structured.year}`      : null,
-      structured.energy  ? `KNOWN_ENERGY: ${structured.energy}`  : null,
-      structured.rooms   ? `KNOWN_ROOMS: ${structured.rooms}`    : null,
-      structured.address ? `KNOWN_ADDRESS: ${structured.address}` : null,
-    ].filter(Boolean).join('\n') : kadHints;
+    // Merge structured (Funda) + earlyKad (BAG) into known facts for AI
+    // BAG is authoritative for sqm/year when scraping misses them
+    const knownFacts = [
+      structured?.price                        ? `KNOWN_PRICE: ${structured.price}`              : null,
+      structured?.sqm                          ? `KNOWN_SQM: ${structured.sqm}`
+        : earlyKad?.official_sqm               ? `KNOWN_SQM: ${earlyKad.official_sqm}`           : null,
+      structured?.year                         ? `KNOWN_YEAR: ${structured.year}`
+        : earlyKad?.official_year              ? `KNOWN_YEAR: ${earlyKad.official_year}`          : null,
+      structured?.energy                       ? `KNOWN_ENERGY: ${structured.energy}`
+        : earlyKad?.energy_label               ? `KNOWN_ENERGY: ${earlyKad.energy_label}`         : null,
+      structured?.rooms                        ? `KNOWN_ROOMS: ${structured.rooms}`               : null,
+      structured?.address                      ? `KNOWN_ADDRESS: ${structured.address}`
+        : earlyKad?.official_address           ? `KNOWN_ADDRESS: ${earlyKad.official_address}`    : null,
+      earlyKad?.woz_huidig                     ? `KNOWN_WOZ: ${earlyKad.woz_huidig}`             : null,
+      earlyKad?.perceel_oppervlakte            ? `KNOWN_PERCEEL: ${earlyKad.perceel_oppervlakte}` : null,
+    ].filter(Boolean).join('\n');
 
     const [aiMsg, kad] = await Promise.all([
       // AI: Haiku — snel (2-4s), temperature:0 voor consistentie

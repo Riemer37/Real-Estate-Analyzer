@@ -121,7 +121,7 @@ export function Sidebar({ onAnalyze, onSelectHistory, loading, loadingStages, cu
           className="w-full flex items-center justify-center gap-2 border border-border bg-muted text-foreground rounded-md py-2.5 text-sm font-semibold transition hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 active:scale-[0.99]"
         >
           <Trash2 className="size-4" />
-          Cache leegmaken
+          Zoekopdrachten Wissen
         </button>
 
         {loading && loadingStages && loadingStages.length > 0 && (
