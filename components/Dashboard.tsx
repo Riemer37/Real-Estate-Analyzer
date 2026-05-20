@@ -16,7 +16,14 @@ import { ExitTab } from './tabs/ExitTab';
 import { saveAnalysis, findCached } from '@/lib/storage';
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-const TABS = ['Overzicht', 'Kadaster', 'Potentieel', 'Aankoop', 'Renovatie', 'Exitstrategie'];
+const TABS = [
+  { id: 0, label: 'Overzicht' },
+  { id: 1, label: 'Kadaster & Data' },
+  { id: 2, label: 'Potentieel' },
+  { id: 3, label: 'Aankoop' },
+  { id: 4, label: 'Renovatie' },
+  { id: 5, label: 'Exitstrategie' },
+];
 const LOADING_STAGES_URL  = ['Pagina ophalen', 'Woninggegevens extraheren', 'Kadaster PDOK raadplegen', 'AI-analyse uitvoeren', 'Investeringsmodel bouwen'];
 const LOADING_STAGES_ADDR = ['Funda doorzoeken op adres', 'Listing gevonden — pagina ophalen', 'Kadaster PDOK raadplegen', 'AI-analyse uitvoeren', 'Investeringsmodel bouwen'];
 
@@ -130,45 +137,48 @@ function mapApiResponse(raw: Record<string, any>, input: string, pandtype: PandT
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyState() {
+function EmptyState({ error }: { error: string | null }) {
   return (
-    <div className="px-8 py-14 max-w-4xl mx-auto">
-      <div className="mb-10">
-        <div className="label-eyebrow mb-3">Vastgoed Investment Platform</div>
-        <h1 className="display text-4xl font-bold tracking-tight mb-4 leading-tight">
-          Investeringsanalyse<br />in seconden.
+    <div className="flex-1 relative overflow-hidden flex items-center justify-center min-h-[calc(100vh-0px)]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/hero-architecture.jpg"
+        alt="Klassieke Amsterdamse grachtenpanden"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 bg-white/40" />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-white/60" />
+
+      <div className="relative w-full max-w-2xl mx-6 panel shadow-elevated p-8 md:p-10">
+        <div className="label-eyebrow mb-3 text-center">Nederlandse Vastgoed Investment Terminal</div>
+        <h1 className="display text-3xl md:text-4xl font-extrabold tracking-tight text-navy text-center leading-tight">
+          Analyseer elk vastgoedobject in seconden
         </h1>
-        <p className="text-muted-foreground max-w-lg leading-relaxed">
-          Plak een Funda-URL of typ een adres in de zijbalk voor een compleet investeringsdossier —
-          Kadasterdata, risicoscore, renovatiebudget en exitstrategie.
+        <p className="text-sm md:text-[15px] text-muted-foreground mt-3 text-center max-w-lg mx-auto leading-relaxed">
+          Plak een Funda-URL of voer een Nederlands adres in en krijg direct marktwaarde,
+          maximaal bod, risicoprofiel en rendement.
         </p>
-      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[
-          ['Woningdata', 'Prijs, m², energielabel en staat automatisch opgehaald uit elke listing.'],
-          ['Kadaster BAG', 'Officiële splitsingstatus, oppervlakte en bouwjaar via PDOK API.'],
-          ['Risicoanalyse', 'Locatie-, staat-, markt- en liquiditeitsrisico met een totaalscore.'],
-          ['Exitstrategie', 'Verkoop- of verhuur-ROI met gezonde marge en terugverdientijd.'],
-        ].map(([name, txt]) => (
-          <div key={name} className="panel navy-top lift p-4">
-            <div className="text-sm font-semibold text-navy mb-1.5">{name}</div>
-            <div className="text-xs text-muted-foreground leading-relaxed">{txt}</div>
-          </div>
-        ))}
-      </div>
+        <p className="mt-6 text-sm text-muted-foreground text-center">
+          Gebruik de zijbalk links om een analyse te starten.
+        </p>
 
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          ['Werkt met', 'Funda · Pararius · meer'],
-          ['Databron', 'PDOK BAG — Officieel NL register'],
-          ['Aangedreven door', 'Claude AI (Anthropic)'],
-        ].map(([lbl, val]) => (
-          <div key={lbl} className="panel px-4 py-3">
-            <div className="label-eyebrow">{lbl}</div>
-            <div className="text-sm font-semibold mt-1 text-navy">{val}</div>
-          </div>
-        ))}
+        {error && (
+          <p className="mt-4 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-3 text-center">{error}</p>
+        )}
+
+        <div className="mt-8 grid grid-cols-3 gap-3 text-[11px]">
+          {[
+            { k: 'Funda · Pararius', v: 'Automatische scraping' },
+            { k: 'PDOK · BAG · RCE', v: 'Officiële databronnen' },
+            { k: 'Claude AI (Anthropic)', v: 'Real-time analyse' },
+          ].map((c) => (
+            <div key={c.k} className="rounded-md border border-border bg-background/80 backdrop-blur p-3 text-left">
+              <div className="label-eyebrow">{c.k}</div>
+              <div className="text-foreground mt-1 font-medium">{c.v}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -185,31 +195,14 @@ function LoadingState() {
   );
 }
 
-// ── Error state ───────────────────────────────────────────────────────────────
-function ErrorState({ error, onDismiss }: { error: string; onDismiss: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-8">
-      <div className="panel border-destructive/40 p-6 max-w-md text-center">
-        <div className="text-destructive font-semibold mb-2">Analyse mislukt</div>
-        <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{error}</p>
-        <button
-          onClick={onDismiss}
-          className="text-xs px-4 py-2 rounded bg-muted hover:bg-muted/80 transition font-medium"
-        >
-          Opnieuw proberen
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [analysis,     setAnalysis]     = useState<PropertyAnalysis | null>(null);
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState<string | null>(null);
-  const [activeTab,    setActiveTab]    = useState(0);
-  const [loadingStages,setLoadingStages]= useState<string[]>([]);
+  const [activeTab,     setActiveTab]     = useState(0);
+  const [loadingStages, setLoadingStages] = useState<string[]>([]);
 
   const handleAnalyze = useCallback(async (q: string, pandtype: PandType) => {
     const isUrl = /^https?:\/\//i.test(q);
@@ -272,39 +265,38 @@ export default function Dashboard() {
         current={analysis}
       />
 
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
         {loading  && <LoadingState />}
-        {!loading && error && <ErrorState error={error} onDismiss={() => setError(null)} />}
-        {!loading && !error && !analysis && <EmptyState />}
+        {!loading && !analysis && <EmptyState error={error} />}
 
-        {!loading && !error && analysis && (
+        {!loading && analysis && (
           <>
             <PropertyHeader a={analysis} />
-            <KpiStrip a={analysis} />
             <MyEstimate a={analysis} onUpdate={handleUpdate} />
+            <KpiStrip a={analysis} />
             <Warnings a={analysis} />
 
             {/* Tab bar */}
-            <div className="px-6 pt-4">
-              <div className="flex border-b border-border gap-1">
-                {TABS.map((t, i) => (
+            <div className="px-6 border-b border-border bg-card">
+              <div className="flex gap-1 overflow-x-auto">
+                {TABS.map((t) => (
                   <button
-                    key={i}
-                    onClick={() => setActiveTab(i)}
-                    className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
-                      activeTab === i
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                    key={t.id}
+                    onClick={() => setActiveTab(t.id)}
+                    className={`px-4 py-3 text-[12px] font-semibold uppercase tracking-wider border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                      activeTab === t.id
+                        ? 'border-primary text-navy'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {t}
+                    {t.label}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Tab content */}
-            <div className="px-6 py-5">
+            <div className="p-6 flex-1 bg-background">
               {activeTab === 0 && <OverviewTab  a={analysis} />}
               {activeTab === 1 && <KadasterTab  a={analysis} onUpdate={handleUpdate} />}
               {activeTab === 2 && <PotentialTab a={analysis} />}
@@ -315,9 +307,6 @@ export default function Dashboard() {
           </>
         )}
 
-        <footer className="text-center text-[10px] text-muted-foreground py-5 border-t border-border mt-4">
-          VastgoedAI · PDOK Kadaster BAG · Claude AI (Anthropic) · {new Date().getFullYear()}
-        </footer>
       </main>
     </div>
   );
