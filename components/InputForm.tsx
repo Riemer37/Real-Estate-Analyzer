@@ -22,6 +22,12 @@ const DEFAULT_INPUT: PropertyInput = {
   erfpacht: false,
   wozWaarde: 0,
   renovatiekostenPerM2: null,
+  eigenGebruik: true,
+  notariskosten: 1500,
+  taxatiekosten: 600,
+  bouwkundigeKeuring: 400,
+  overigeKosten: 0,
+  referentieprijsPerM2: null,
 };
 
 interface InputFormProps {
@@ -260,6 +266,129 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
             </span>
             <span className="font-semibold text-foreground">
               € {(input.renovatiekostenPerM2 * input.woonoppervlakte).toLocaleString('nl-NL')}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Section: Aankoopkosten — centraal voor Max Bod én Verkoop tab */}
+      <div className="panel p-5 space-y-4">
+        <div className={SECTION_HDR}>Aankoopkosten</div>
+
+        <div>
+          <label className={LABEL_CLS}>OVB (overdrachtsbelasting)</label>
+          <div className="mt-1.5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => set('eigenGebruik', true)}
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                input.eigenGebruik
+                  ? 'bg-navy text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/70'
+              }`}
+            >
+              Eigen gebruik (2%)
+            </button>
+            <button
+              type="button"
+              onClick={() => set('eigenGebruik', false)}
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                !input.eigenGebruik
+                  ? 'bg-navy text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/70'
+              }`}
+            >
+              Belegging (10,4%)
+            </button>
+          </div>
+          {input.vraagprijs > 0 && (
+            <div className="mt-2 rounded-md bg-muted px-3 py-2 text-sm tabular">
+              <span className="text-muted-foreground">
+                OVB: {input.eigenGebruik ? '2%' : '10,4%'} × € {input.vraagprijs.toLocaleString('nl-NL')} =&nbsp;
+              </span>
+              <span className="font-semibold text-foreground">
+                € {Math.round(input.vraagprijs * (input.eigenGebruik ? 0.02 : 0.104)).toLocaleString('nl-NL')}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Notariskosten (€)</label>
+            <input
+              type="number"
+              value={input.notariskosten}
+              onChange={e => set('notariskosten', parseNum(e.target.value))}
+              min={0}
+              className={INPUT_CLS}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Taxatiekosten (€)</label>
+            <input
+              type="number"
+              value={input.taxatiekosten}
+              onChange={e => set('taxatiekosten', parseNum(e.target.value))}
+              min={0}
+              className={INPUT_CLS}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Bouwkundige keuring (€)</label>
+            <input
+              type="number"
+              value={input.bouwkundigeKeuring}
+              onChange={e => set('bouwkundigeKeuring', parseNum(e.target.value))}
+              min={0}
+              className={INPUT_CLS}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Overige kosten (€)</label>
+            <input
+              type="number"
+              value={input.overigeKosten}
+              onChange={e => set('overigeKosten', parseNum(e.target.value))}
+              min={0}
+              className={INPUT_CLS}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Verkoopwaarde na verbouwing — centraal voor Max Bod én Verkoop tab */}
+      <div className="panel p-5 space-y-4">
+        <div className={SECTION_HDR}>Verkoopwaarde na verbouwing</div>
+
+        <div className="space-y-1.5">
+          <label className={LABEL_CLS}>
+            Wat zijn vergelijkbare verbouwde panden in de buurt waard per m²?
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground shrink-0">€</span>
+            <input
+              type="number"
+              value={input.referentieprijsPerM2 === null ? '' : input.referentieprijsPerM2}
+              onChange={e => set('referentieprijsPerM2', e.target.value === '' ? null : parseNum(e.target.value))}
+              placeholder="bijv. 9.000"
+              min={0}
+              className={INPUT_CLS}
+            />
+            <span className="text-sm text-muted-foreground shrink-0">per m²</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Kijk op Funda naar recent verkochte verbouwde panden in de buurt
+          </p>
+        </div>
+
+        {input.referentieprijsPerM2 !== null && input.referentieprijsPerM2 > 0 && input.woonoppervlakte > 0 && (
+          <div className="rounded-md bg-muted px-3 py-2.5 text-sm tabular">
+            <span className="text-muted-foreground">
+              € {input.referentieprijsPerM2.toLocaleString('nl-NL')} × {input.woonoppervlakte} m² =&nbsp;
+            </span>
+            <span className="font-semibold text-foreground">
+              € {(input.referentieprijsPerM2 * input.woonoppervlakte).toLocaleString('nl-NL')}
             </span>
           </div>
         )}

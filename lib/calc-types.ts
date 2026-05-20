@@ -6,15 +6,23 @@ export interface PropertyInput {
   adres: string;
   vraagprijs: number;
   woonoppervlakte: number;
-  perceeloppervlakte: number | null;  // null = not applicable
+  perceeloppervlakte: number | null;
   bouwjaar: number;
   energielabel: EnergyLabel;
   typeWoning: WoningType;
   aantalKamers: number;
   conditie: Conditie;
   erfpacht: boolean;
-  wozWaarde: number;           // fetched from Kadaster, user can override
-  renovatiekostenPerM2: number | null;  // cost per m², total = perM2 × woonoppervlakte
+  wozWaarde: number;
+  renovatiekostenPerM2: number | null;
+  // Centralized purchase costs — shared by MaxBodTab and VerkoopTab
+  eigenGebruik: boolean;          // true = 2% OVB, false = 10.4%
+  notariskosten: number;
+  taxatiekosten: number;
+  bouwkundigeKeuring: number;
+  overigeKosten: number;
+  // Market reference price for ARV — shared by MaxBodTab and VerkoopTab
+  referentieprijsPerM2: number | null;
 }
 
 export interface KadasterInfo {

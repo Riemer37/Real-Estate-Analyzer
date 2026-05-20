@@ -144,6 +144,17 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                     ? `€ ${input.renovatiekostenPerM2.toLocaleString('nl-NL')}/m² = ${fmtEUR(input.renovatiekostenPerM2 * input.woonoppervlakte)}`
                     : '—'
                 },
+                {
+                  k: 'Referentieprijs buurt',
+                  v: input.referentieprijsPerM2 !== null
+                    ? `€ ${input.referentieprijsPerM2.toLocaleString('nl-NL')}/m² = ${fmtEUR(input.referentieprijsPerM2 * input.woonoppervlakte)}`
+                    : '—'
+                },
+                { k: 'OVB', v: input.eigenGebruik ? 'Eigen gebruik (2%)' : 'Belegging (10,4%)' },
+                { k: 'Notariskosten', v: fmtEUR(input.notariskosten) },
+                { k: 'Taxatiekosten', v: fmtEUR(input.taxatiekosten) },
+                { k: 'Bouwkundige keuring', v: fmtEUR(input.bouwkundigeKeuring) },
+                { k: 'Overige kosten', v: input.overigeKosten > 0 ? fmtEUR(input.overigeKosten) : '—' },
               ].map(row => (
                 <tr key={row.k}>
                   <td className="py-1.5 pr-3 text-muted-foreground">{row.k}</td>
