@@ -5,7 +5,6 @@ export type Conditie = 'uitstekend'|'goed'|'redelijk'|'slecht'|'te_renoveren';
 export interface PropertyInput {
   adres: string;
   vraagprijs: number;
-  marktwaarde: number;         // always manual, never AI-estimated
   woonoppervlakte: number;
   perceeloppervlakte: number | null;  // null = not applicable
   bouwjaar: number;
@@ -15,7 +14,7 @@ export interface PropertyInput {
   conditie: Conditie;
   erfpacht: boolean;
   wozWaarde: number;           // fetched from Kadaster, user can override
-  renovatiekostenEigen: number | null;  // optional user override
+  renovatiekostenPerM2: number | null;  // cost per m², total = perM2 × woonoppervlakte
 }
 
 export interface KadasterInfo {

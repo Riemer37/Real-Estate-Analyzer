@@ -32,11 +32,11 @@ interface VerkoopTabProps {
 }
 
 export default function VerkoopTab({ input }: VerkoopTabProps) {
-  const renovatiekosten = input.renovatiekostenEigen !== null && input.renovatiekostenEigen !== undefined
-    ? input.renovatiekostenEigen
+  const renovatiekosten = input.renovatiekostenPerM2 !== null && input.renovatiekostenPerM2 !== undefined
+    ? Math.round(input.renovatiekostenPerM2 * input.woonoppervlakte)
     : Math.round(conditieToRenovatie(input.conditie, input.woonoppervlakte));
 
-  const defaultARV = input.marktwaarde + Math.round(renovatiekosten * 0.7);
+  const defaultARV = input.vraagprijs + Math.round(renovatiekosten * 0.7);
 
   const [arv, setArv] = useState(defaultARV);
   const [makelaarPct, setMakelaarPct] = useState(1.5);

@@ -59,9 +59,6 @@ function SummaryBar({
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           <Pill className="source-bag">{fmtEUR(input.vraagprijs)}</Pill>
           <span className="text-muted-foreground text-[11px]">vraagprijs</span>
-          <span className="text-muted-foreground text-[11px]">·</span>
-          <Pill className="bg-primary/10 text-primary border-primary/25">{fmtEUR(input.marktwaarde)}</Pill>
-          <span className="text-muted-foreground text-[11px]">marktwaarde</span>
           {input.wozWaarde > 0 && (
             <>
               <span className="text-muted-foreground text-[11px]">·</span>
@@ -132,7 +129,6 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
               {[
                 { k: 'Adres', v: input.adres },
                 { k: 'Vraagprijs', v: fmtEUR(input.vraagprijs) },
-                { k: 'Marktwaarde', v: fmtEUR(input.marktwaarde) },
                 { k: 'WOZ waarde', v: input.wozWaarde > 0 ? fmtEUR(input.wozWaarde) : '—' },
                 { k: 'Woonoppervlakte', v: `${input.woonoppervlakte} m²` },
                 { k: 'Perceeloppervlakte', v: input.perceeloppervlakte !== null ? `${input.perceeloppervlakte} m²` : 'N.v.t.' },
@@ -142,7 +138,12 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                 { k: 'Aantal kamers', v: String(input.aantalKamers) },
                 { k: 'Conditie', v: input.conditie.replace('_', ' ').charAt(0).toUpperCase() + input.conditie.replace('_', ' ').slice(1) },
                 { k: 'Erfpacht', v: input.erfpacht ? 'Ja' : 'Nee' },
-                { k: 'Eigen renovatiekosten', v: input.renovatiekostenEigen !== null ? fmtEUR(input.renovatiekostenEigen) : 'Automatisch' },
+                {
+                  k: 'Verbouwingskosten',
+                  v: input.renovatiekostenPerM2 !== null
+                    ? `€ ${input.renovatiekostenPerM2.toLocaleString('nl-NL')}/m² = ${fmtEUR(input.renovatiekostenPerM2 * input.woonoppervlakte)}`
+                    : '—'
+                },
               ].map(row => (
                 <tr key={row.k}>
                   <td className="py-1.5 pr-3 text-muted-foreground">{row.k}</td>

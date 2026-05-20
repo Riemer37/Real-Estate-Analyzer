@@ -8,12 +8,15 @@ export async function POST(request) {
   try {
     const { input, kad } = await request.json();
 
+    const renovatietotaal = input.renovatiekostenPerM2
+      ? input.renovatiekostenPerM2 * input.woonoppervlakte
+      : null;
+
     const context = `
 Woningdata (ingevoerd door gebruiker):
 - Adres: ${input.adres}
 - Type: ${input.typeWoning}
 - Vraagprijs: €${input.vraagprijs.toLocaleString('nl-NL')}
-- Marktwaarde (handmatig): €${input.marktwaarde.toLocaleString('nl-NL')}
 - WOZ waarde: €${input.wozWaarde.toLocaleString('nl-NL')}
 - Woonoppervlakte: ${input.woonoppervlakte}m²
 - Perceeloppervlakte: ${input.perceeloppervlakte ? input.perceeloppervlakte + 'm²' : 'N.v.t.'}
@@ -22,7 +25,7 @@ Woningdata (ingevoerd door gebruiker):
 - Aantal kamers: ${input.aantalKamers}
 - Staat van onderhoud: ${input.conditie}
 - Erfpacht: ${input.erfpacht ? 'Ja' : 'Nee'}
-- Renovatiekosten (eigen inschatting): ${input.renovatiekostenEigen ? '€' + input.renovatiekostenEigen.toLocaleString('nl-NL') : 'Niet opgegeven'}
+- Verbouwingskosten: ${renovatietotaal ? '€' + input.renovatiekostenPerM2.toLocaleString('nl-NL') + '/m² = €' + renovatietotaal.toLocaleString('nl-NL') + ' totaal' : 'Niet opgegeven'}
 
 Kadaster/BAG data:
 - Officieel adres: ${kad.officielAdres ?? 'Niet gevonden'}
@@ -41,7 +44,7 @@ Kadaster/BAG data:
         role: 'user',
         content: `Je bent een Nederlandse vastgoed investment adviseur. Analyseer onderstaand object en geef:
 
-THESE: [3-4 zinnen investeringsthese — waarom wel/niet interessant als investering, op basis van verhouding vraagprijs/marktwaarde en staat]
+THESE: [3-4 zinnen investeringsthese — waarom wel/niet interessant als investering, op basis van vraagprijs, verbouwingskosten en staat]
 RISICO: [3-4 zinnen risicotoelichting — specifieke risico's voor dit object: bouwjaar, energielabel, erfpacht, monument, marktpositie]
 TRANSFORMATIE: [2-3 zinnen transformatieadvies — splitsing, optoppen, verhuur, renovatie mogelijkheden]
 

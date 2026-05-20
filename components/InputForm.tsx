@@ -12,7 +12,6 @@ const SECTION_HDR = 'text-[10px] uppercase tracking-wide text-muted-foreground f
 const DEFAULT_INPUT: PropertyInput = {
   adres: '',
   vraagprijs: 0,
-  marktwaarde: 0,
   woonoppervlakte: 0,
   perceeloppervlakte: null,
   bouwjaar: 0,
@@ -22,7 +21,7 @@ const DEFAULT_INPUT: PropertyInput = {
   conditie: 'redelijk',
   erfpacht: false,
   wozWaarde: 0,
-  renovatiekostenEigen: null,
+  renovatiekostenPerM2: null,
 };
 
 interface InputFormProps {
@@ -121,7 +120,6 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
   const isValid =
     input.adres.trim() !== '' &&
     input.vraagprijs > 0 &&
-    input.marktwaarde > 0 &&
     input.woonoppervlakte > 0 &&
     input.bouwjaar > 0;
 
@@ -212,21 +210,6 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
           </div>
 
           <div className="space-y-1.5">
-            <label className={LABEL_CLS}>Marktwaarde (€)</label>
-            <input
-              type="number"
-              value={numVal(input.marktwaarde)}
-              onChange={e => set('marktwaarde', parseNum(e.target.value))}
-              placeholder="340000"
-              min={0}
-              className={INPUT_CLS}
-            />
-            <p className="text-[11px] text-warning font-medium">
-              Altijd handmatig invullen — wordt nooit door AI geschat
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
             <label className={LABEL_CLS}>
               WOZ waarde (€)
               {wozAutoFilled && (
@@ -247,22 +230,39 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
               className={INPUT_CLS}
             />
           </div>
+        </div>
+      </div>
 
-          <div className="space-y-1.5">
-            <label className={LABEL_CLS}>Eigen renovatiekosten (€)</label>
+      {/* Section: Verbouwingskosten per m² */}
+      <div className="panel p-5 space-y-4">
+        <div className={SECTION_HDR}>Verbouwingskosten per m²</div>
+
+        <div className="space-y-1.5">
+          <label className={LABEL_CLS}>Verbouwingskosten per m²</label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground shrink-0">€</span>
             <input
               type="number"
-              value={input.renovatiekostenEigen === null ? '' : input.renovatiekostenEigen}
-              onChange={e => set('renovatiekostenEigen', e.target.value === '' ? null : parseNum(e.target.value))}
-              placeholder="Optioneel"
+              value={input.renovatiekostenPerM2 === null ? '' : input.renovatiekostenPerM2}
+              onChange={e => set('renovatiekostenPerM2', e.target.value === '' ? null : parseNum(e.target.value))}
+              placeholder="bijv. 500"
               min={0}
               className={INPUT_CLS}
             />
-            <p className="text-[11px] text-muted-foreground">
-              Optioneel — laat leeg voor automatische schatting
-            </p>
+            <span className="text-sm text-muted-foreground shrink-0">per m²</span>
           </div>
         </div>
+
+        {input.renovatiekostenPerM2 !== null && input.renovatiekostenPerM2 > 0 && input.woonoppervlakte > 0 && (
+          <div className="rounded-md bg-muted px-3 py-2.5 text-sm tabular">
+            <span className="text-muted-foreground">
+              € {input.renovatiekostenPerM2.toLocaleString('nl-NL')} × {input.woonoppervlakte} m² =&nbsp;
+            </span>
+            <span className="font-semibold text-foreground">
+              € {(input.renovatiekostenPerM2 * input.woonoppervlakte).toLocaleString('nl-NL')}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Section 3: Woning */}

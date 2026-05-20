@@ -3,32 +3,11 @@
 import { useState, useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import type { PropertyInput, KadasterInfo } from '@/lib/calc-types';
-import { fmtEUR, fmtPct, berekenRenovatiekosten } from '@/lib/calculations';
-import type { PropertyAnalysis } from '@/lib/types';
+import { fmtEUR, fmtPct } from '@/lib/calculations';
 
 const LABEL_CLS = 'text-xs font-medium text-muted-foreground';
 const INPUT_CLS = 'w-full bg-background border border-border rounded-md px-3 py-2 tabular text-sm';
 const SECTION_HDR = 'text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-3';
-
-function conditieToScore(conditie: PropertyInput['conditie']): number {
-  switch (conditie) {
-    case 'uitstekend': return 2;
-    case 'goed': return 4;
-    case 'redelijk': return 6;
-    case 'slecht': return 8;
-    case 'te_renoveren': return 9;
-  }
-}
-
-function conditieToStaat(conditie: PropertyInput['conditie']): string {
-  switch (conditie) {
-    case 'uitstekend': return 'uitstekend';
-    case 'goed': return 'goed';
-    case 'redelijk': return 'redelijk';
-    case 'slecht': return 'slecht';
-    case 'te_renoveren': return 'slecht';
-  }
-}
 
 function Line({
   k,
@@ -70,39 +49,26 @@ export default function MaxBodTab({ input }: MaxBodTabProps) {
 
   const calc = useMemo(() => {
     const ovbPct = eigenGebruik && input.typeWoning !== 'commercieel' ? 2 : 10.4;
+    const renovatiekosten = Math.round((input.renovatiekostenPerM2 ?? 0) * input.woonoppervlakte);
+    const ovbBedrag = Math.round(input.vraagprijs * (ovbPct / 100));
     const vastKosten = notaris + taxatie + keuring;
-    const ovbBedrag = Math.round(input.marktwaarde * (ovbPct / 100));
-    const roiBuffer = Math.round(input.marktwaarde * (roi / 100));
-
-    let renovatiekosten: number;
-    if (input.renovatiekostenEigen !== null && input.renovatiekostenEigen !== undefined) {
-      renovatiekosten = input.renovatiekostenEigen;
-    } else {
-      const fakeAnalysis = {
-        bag: { bouwjaar: input.bouwjaar, oppervlakte: input.woonoppervlakte },
-        listing: { energielabel: input.energielabel },
-        manual_overrides: { staat: conditieToStaat(input.conditie) },
-        ai: { risico: { staat: conditieToScore(input.conditie) } },
-        pandtype: input.typeWoning === 'commercieel' ? 'commercieel' : 'woning',
-      } as unknown as PropertyAnalysis;
-      const reno = berekenRenovatiekosten(fakeAnalysis);
-      renovatiekosten = reno.totaal;
-    }
+    const aankoopkosten = ovbBedrag + vastKosten;
+    const gewensteWinst = Math.round(input.vraagprijs * (roi / 100));
 
     const maxBod = Math.max(
       0,
       Math.round(
-        (input.marktwaarde - renovatiekosten - ovbBedrag - vastKosten - roiBuffer) / 1000
+        (input.vraagprijs - renovatiekosten - aankoopkosten - gewensteWinst) / 1000
       ) * 1000
     );
 
     const verschil = maxBod - input.vraagprijs;
     const verschilPct = input.vraagprijs > 0 ? (verschil / input.vraagprijs) * 100 : 0;
 
-    return { ovbPct, vastKosten, ovbBedrag, roiBuffer, renovatiekosten, maxBod, verschil, verschilPct };
+    return { ovbPct, renovatiekosten, ovbBedrag, vastKosten, aankoopkosten, gewensteWinst, maxBod, verschil, verschilPct };
   }, [roi, eigenGebruik, notaris, taxatie, keuring, input]);
 
-  const lowBodWarning = input.vraagprijs > 0 && calc.maxBod < input.vraagprijs * 0.75;
+  const negativeBodWarning = calc.maxBod === 0 && input.vraagprijs > 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -186,12 +152,12 @@ export default function MaxBodTab({ input }: MaxBodTabProps) {
         <div className={SECTION_HDR}>Berekening stap voor stap</div>
 
         <div className="tabular space-y-2 text-sm">
-          <Line k="Marktwaarde (basis)" v={fmtEUR(input.marktwaarde)} bold />
+          <Line k="Vraagprijs (basis)" v={fmtEUR(input.vraagprijs)} bold />
           <Line
-            k="− Renovatiekosten"
+            k="− Verbouwingskosten"
             v={`− ${fmtEUR(calc.renovatiekosten)}`}
             color="text-destructive"
-            sub={input.renovatiekostenEigen !== null ? '(eigen schatting)' : '(automatisch)'}
+            sub={input.renovatiekostenPerM2 ? `(€${input.renovatiekostenPerM2.toLocaleString('nl-NL')} × ${input.woonoppervlakte} m²)` : '(niet opgegeven)'}
           />
           <Line
             k={`− OVB (${calc.ovbPct}%)`}
@@ -204,10 +170,10 @@ export default function MaxBodTab({ input }: MaxBodTabProps) {
             color="text-destructive"
           />
           <Line
-            k="− ROI buffer"
-            v={`− ${fmtEUR(calc.roiBuffer)}`}
+            k="− Gewenste winst"
+            v={`− ${fmtEUR(calc.gewensteWinst)}`}
             color="text-destructive"
-            sub={`(${roi}% × marktwaarde)`}
+            sub={`(${roi}% × vraagprijs)`}
           />
         </div>
 
@@ -223,19 +189,19 @@ export default function MaxBodTab({ input }: MaxBodTabProps) {
           <Line k="Vraagprijs" v={fmtEUR(input.vraagprijs)} />
           <Line k="Max bod" v={fmtEUR(calc.maxBod)} bold />
           <div className="flex justify-between items-baseline text-sm font-semibold">
-            <span className="text-muted-foreground">Verschil</span>
+            <span className="text-muted-foreground">Marge t.o.v. vraagprijs</span>
             <span className={calc.verschil >= 0 ? 'text-positive' : 'text-destructive'}>
               {fmtEUR(calc.verschil)} ({fmtPct(calc.verschilPct)})
             </span>
           </div>
         </div>
 
-        {lowBodWarning && (
+        {negativeBodWarning && (
           <div className="flex items-start gap-2 text-xs rounded-md border border-warning/40 bg-warning/10 text-warning p-3">
             <AlertTriangle className="size-4 shrink-0 mt-0.5" />
             <span>
-              Het maximale bod ligt meer dan 25% onder de vraagprijs. Controleer of de
-              marktwaarde, renovatiekosten en ROI realistisch zijn.
+              Het maximale bod is nul of negatief. Controleer de verbouwingskosten,
+              aankoopkosten en gewenste winst.
             </span>
           </div>
         )}
