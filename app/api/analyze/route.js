@@ -94,7 +94,7 @@ function sqmFromJsonLD($) {
     try {
       const schemas = JSON.parse($(el).html() ?? '');
       for (const s of (Array.isArray(schemas) ? schemas : [schemas])) {
-        const raw = s.floorSize ?? s.livingArea ?? s.floorspace ?? s.size;
+        const raw = s.floorSize ?? s.livingArea ?? s.floorspace;
         if (!raw) continue;
         const n = typeof raw === 'number' ? raw : parseFloat(String(raw?.value ?? raw).replace(/[^\d.]/g, ''));
         if (isFinite(n) && n >= 10 && n <= 2000) { result = n; break; }
@@ -108,10 +108,9 @@ function sqmFromJsonLD($) {
 function sqmFromText(text) {
   const patterns = [
     /woonoppervlakte[^\d]*(\d{2,4})\s*m[²2]/i,
-    /woonopp(?:ervlakte)?[^\d]*(\d{2,4})/i,
+    /woonopp(?:ervlakte)?[^\d\n]*(\d{2,4})/i,
     /living\s*area[^\d]*(\d{2,4})/i,
     /(\d{2,4})\s*m[²2]\s*(?:woon|living|gebruiks)/i,
-    /(\d{2,4})\s*m²/i,
   ];
   for (const re of patterns) {
     const m = text.match(re);
@@ -130,7 +129,7 @@ function extractStructured(html) {
     const priceRaw = deepFind(json, ['sellingPrice','koopprijs','askingPrice','listPrice','price']);
     const sqmRaw   = deepFind(json, [
       'livingArea','livingAreaSize','livingSpaceSize','netLivingArea','grossLivingArea',
-      'usableArea','floorArea','floorSize','objectSize',
+      'usableArea','floorArea',
       'woonoppervlakte','gebruiksoppervlakte','woonOppervlakte',
     ]);
     const yearRaw  = deepFind(json, ['constructionYear','bouwjaar','yearOfConstruction','yearBuilt','buildYear']);
