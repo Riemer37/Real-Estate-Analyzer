@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, History, Trash2, Building2 } from 'lucide-react';
+import { AlertTriangle, Trash2, Clock } from 'lucide-react';
 import type { PropertyInput, KadasterInfo, EnergyLabel } from '@/lib/calc-types';
 import { fmtEUR } from '@/lib/calculations';
 import { loadSessions, saveSession, deleteSession, clearSessions, type CalculatorSession } from '@/lib/calc-storage';
@@ -12,7 +12,6 @@ import VerkoopTab from '@/components/calculators/VerkoopTab';
 import BelastingTab from '@/components/calculators/BelastingTab';
 import AIAnalyseTab from '@/components/calculators/AIAnalyseTab';
 
-// ── Tab definitions ────────────────────────────────────────────────────────────
 const TABS = [
   { id: 0, label: 'Samenvatting' },
   { id: 1, label: 'Max Bod' },
@@ -22,7 +21,6 @@ const TABS = [
   { id: 5, label: 'AI Analyse' },
 ];
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
 function energielabelColor(label: EnergyLabel): string {
   switch (label) {
     case 'A+++': case 'A++': case 'A+': case 'A': return 'bg-positive/15 text-positive border-positive/30';
@@ -49,13 +47,13 @@ function relativeTime(ts: number): string {
   const h = Math.floor(diff / 3600000);
   const d = Math.floor(diff / 86400000);
   if (m < 1)  return 'Zojuist';
-  if (m < 60) return `${m} min`;
-  if (h < 24) return `${h} uur`;
-  return `${d}d`;
+  if (m < 60) return `${m} min geleden`;
+  if (h < 24) return `${h} uur geleden`;
+  return `${d} dag${d > 1 ? 'en' : ''} geleden`;
 }
 
-// ── History sidebar ────────────────────────────────────────────────────────────
-function HistorySidebar({
+// ── Opgeslagen analyses boven het formulier ───────────────────────────────────
+function HistoryList({
   sessions,
   activeId,
   onSelect,
@@ -68,87 +66,63 @@ function HistorySidebar({
   onDelete: (id: string) => void;
   onClearAll: () => void;
 }) {
+  if (sessions.length === 0) return null;
+
   return (
-    <aside className="w-[240px] shrink-0 bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 border-r border-sidebar-border z-20 shadow-sidebar">
-      {/* Brand */}
-      <div className="px-4 py-4 border-b border-sidebar-border flex items-center gap-2.5">
-        <div className="size-8 rounded-md bg-navy flex items-center justify-center shrink-0">
-          <Building2 className="size-4 text-primary-foreground" strokeWidth={2.4} />
+    <div className="panel p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 label-eyebrow">
+          <Clock className="size-3" />
+          Opgeslagen analyses
         </div>
-        <div>
-          <div className="font-bold tracking-tight text-[14px] display text-navy">VastgoedAI</div>
-          <div className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Investment Terminal</div>
-        </div>
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="text-[11px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+        >
+          <Trash2 className="size-3" />
+          Alles wissen
+        </button>
       </div>
 
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-sidebar-border flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
-          <History className="size-3" />
-          Opgeslagen
-        </div>
-        {sessions.length > 0 && (
-          <button
-            type="button"
-            onClick={onClearAll}
-            className="text-muted-foreground hover:text-destructive transition-colors"
-            title="Alles wissen"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
-        )}
-      </div>
-
-      {/* Session list */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1">
-        {sessions.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground/70 px-1 pt-1">
-            Analyses worden hier opgeslagen zodra je op &quot;Analyseer &amp; Bereken&quot; klikt.
-          </p>
-        ) : (
-          sessions.map(s => {
-            const active = s.id === activeId;
-            return (
-              <div
-                key={s.id}
-                onClick={() => onSelect(s)}
-                className={`group rounded-md px-2.5 py-2 cursor-pointer border transition-colors ${
-                  active
-                    ? 'bg-muted border-primary/40 shadow-[inset_2px_0_0_var(--primary)]'
-                    : 'border-transparent hover:bg-muted hover:border-border'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-1">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-medium text-foreground truncate leading-snug">
-                      {s.kad.officielAdres ?? s.input.adres}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5 tabular">
-                      <span className="text-[10px] text-navy font-semibold">{fmtEUR(s.input.vraagprijs)}</span>
-                      <span className="text-muted-foreground/50 text-[10px]">·</span>
-                      <span className="text-[10px] text-muted-foreground">{s.input.woonoppervlakte} m²</span>
-                      <span className="text-muted-foreground/50 text-[10px]">·</span>
-                      <span className="text-[10px] text-muted-foreground">{relativeTime(s.timestamp)}</span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={e => { e.stopPropagation(); onDelete(s.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all shrink-0 mt-0.5"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
+      <ul className="space-y-1">
+        {sessions.map(s => {
+          const active = s.id === activeId;
+          return (
+            <li
+              key={s.id}
+              className={`group flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer border transition-colors ${
+                active
+                  ? 'bg-muted border-primary/40 shadow-[inset_2px_0_0_var(--primary)]'
+                  : 'border-transparent hover:bg-muted hover:border-border'
+              }`}
+              onClick={() => onSelect(s)}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground truncate">
+                  {s.kad.officielAdres ?? s.input.adres}
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5 tabular">
+                  <span className="text-navy font-semibold">{fmtEUR(s.input.vraagprijs)}</span>
+                  <span className="opacity-40">·</span>
+                  <span>{s.input.woonoppervlakte} m²</span>
+                  <span className="opacity-40">·</span>
+                  <span>{relativeTime(s.timestamp)}</span>
                 </div>
               </div>
-            );
-          })
-        )}
-      </div>
-
-      <div className="px-4 py-2.5 text-[9px] uppercase tracking-[0.15em] text-muted-foreground border-t border-sidebar-border">
-        Lokaal opgeslagen · max 25
-      </div>
-    </aside>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); onDelete(s.id); }}
+                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all shrink-0"
+                aria-label="Verwijder"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -219,7 +193,6 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Invoergegevens */}
         <div className="panel p-5">
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-3">Invoergegevens</div>
           <table className="w-full text-sm">
@@ -257,7 +230,6 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
           </table>
         </div>
 
-        {/* Kadaster */}
         <div className="panel p-5">
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-3">Kadaster / BAG</div>
           {kad.found ? (
@@ -265,19 +237,19 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-border">
                   {[
-                    { k: 'Officieel adres',    v: kad.officielAdres ?? '—' },
-                    { k: 'Woonplaats',         v: kad.woonplaats ?? '—' },
-                    { k: 'Gemeente',           v: kad.gemeente ?? '—' },
-                    { k: 'Buurt',              v: kad.buurt ?? '—' },
-                    { k: 'BAG-id',             v: kad.bagId ?? '—' },
-                    { k: 'Gebruiksdoel',       v: kad.gebruiksdoel ?? '—' },
-                    { k: 'Status',             v: kad.status ?? '—' },
-                    { k: 'Rijksmonument',      v: kad.isRijksmonument ? 'Ja' : 'Nee' },
-                    { k: 'Beschermd gezicht',  v: kad.beschermdGezicht ?? 'Nee' },
-                    { k: "Splitsing (VBO's)",  v: kad.vboCount !== undefined ? String(kad.vboCount) : '—' },
-                    { k: 'Officieel opp.',     v: kad.officielSqm !== undefined ? `${kad.officielSqm} m²` : '—' },
-                    { k: 'Perceeloppervlak',   v: kad.perceelOppervlakte !== undefined ? `${kad.perceelOppervlakte} m²` : '—' },
-                    { k: 'EP-label',           v: kad.energielabelEP ?? '—' },
+                    { k: 'Officieel adres',  v: kad.officielAdres ?? '—' },
+                    { k: 'Woonplaats',       v: kad.woonplaats ?? '—' },
+                    { k: 'Gemeente',         v: kad.gemeente ?? '—' },
+                    { k: 'Buurt',            v: kad.buurt ?? '—' },
+                    { k: 'BAG-id',           v: kad.bagId ?? '—' },
+                    { k: 'Gebruiksdoel',     v: kad.gebruiksdoel ?? '—' },
+                    { k: 'Status',           v: kad.status ?? '—' },
+                    { k: 'Rijksmonument',    v: kad.isRijksmonument ? 'Ja' : 'Nee' },
+                    { k: 'Beschermd gezicht',v: kad.beschermdGezicht ?? 'Nee' },
+                    { k: "Splitsing (VBO's)",v: kad.vboCount !== undefined ? String(kad.vboCount) : '—' },
+                    { k: 'Officieel opp.',   v: kad.officielSqm !== undefined ? `${kad.officielSqm} m²` : '—' },
+                    { k: 'Perceeloppervlak', v: kad.perceelOppervlakte !== undefined ? `${kad.perceelOppervlakte} m²` : '—' },
+                    { k: 'EP-label',         v: kad.energielabelEP ?? '—' },
                   ].map(row => (
                     <tr key={row.k}>
                       <td className="py-1.5 pr-3 text-muted-foreground">{row.k}</td>
@@ -315,7 +287,6 @@ export default function CalculatorDashboard() {
   const [activeTab, setActiveTab] = useState(1);
   const [sessions,  setSessions]  = useState<CalculatorSession[]>([]);
 
-  // Load from localStorage after mount
   useEffect(() => { setSessions(loadSessions()); }, []);
 
   const handleCalculate = useCallback((inp: PropertyInput, kad: KadasterInfo) => {
@@ -350,65 +321,65 @@ export default function CalculatorDashboard() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar with history */}
-      <HistorySidebar
-        sessions={sessions}
-        activeId={result?.id ?? null}
-        onSelect={handleSelectSession}
-        onDelete={handleDeleteSession}
-        onClearAll={handleClearAll}
-      />
-
-      {/* Main content */}
-      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
-        {!result ? (
-          <div className="max-w-3xl mx-auto px-6 py-10 w-full">
-            <div className="mb-8">
-              <div className="label-eyebrow mb-2">Vastgoed Calculator</div>
-              <h1 className="display text-3xl font-extrabold text-navy">Investeringsanalyse</h1>
-              <p className="text-muted-foreground mt-1">
-                Voer de woningdata in voor accurate berekeningen op basis van jouw eigen waardeschatting.
-              </p>
-            </div>
-            <InputForm onCalculate={handleCalculate} />
+    <div className="min-h-screen bg-background">
+      {!result ? (
+        /* ── Formulier-weergave ── */
+        <div className="max-w-3xl mx-auto px-6 py-10">
+          <div className="mb-8">
+            <div className="label-eyebrow mb-2">Vastgoed Calculator</div>
+            <h1 className="display text-3xl font-extrabold text-navy">Investeringsanalyse</h1>
+            <p className="text-muted-foreground mt-1">
+              Voer de woningdata in voor accurate berekeningen op basis van jouw eigen waardeschatting.
+            </p>
           </div>
-        ) : (
-          <>
-            <SummaryBar input={result.input} kad={result.kad} onReset={handleReset} />
 
-            {/* Tab bar */}
-            <div className="px-6 border-b border-border bg-card">
-              <div className="flex gap-1 overflow-x-auto">
-                {TABS.map(t => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setActiveTab(t.id)}
-                    className={`px-4 py-3 text-[12px] font-semibold uppercase tracking-wider border-b-2 -mb-px transition-colors whitespace-nowrap ${
-                      activeTab === t.id
-                        ? 'border-primary text-navy'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Opgeslagen analyses — alleen zichtbaar als er sessies zijn */}
+          <div className="mb-6">
+            <HistoryList
+              sessions={sessions}
+              activeId={result?.id ?? null}
+              onSelect={handleSelectSession}
+              onDelete={handleDeleteSession}
+              onClearAll={handleClearAll}
+            />
+          </div>
 
-            {/* Tab content */}
-            <div className="p-6 bg-background flex-1">
-              {activeTab === 0 && <SamenvattingTab input={result.input} kad={result.kad} />}
-              {activeTab === 1 && <MaxBodTab       input={result.input} kad={result.kad} />}
-              {activeTab === 2 && <VerhuurTab      input={result.input} kad={result.kad} />}
-              {activeTab === 3 && <VerkoopTab      input={result.input} kad={result.kad} />}
-              {activeTab === 4 && <BelastingTab    input={result.input} kad={result.kad} />}
-              {activeTab === 5 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
+          <InputForm onCalculate={handleCalculate} />
+        </div>
+      ) : (
+        /* ── Resultaat-weergave ── */
+        <>
+          <SummaryBar input={result.input} kad={result.kad} onReset={handleReset} />
+
+          <div className="px-6 border-b border-border bg-card">
+            <div className="flex gap-1 overflow-x-auto">
+              {TABS.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTab(t.id)}
+                  className={`px-4 py-3 text-[12px] font-semibold uppercase tracking-wider border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                    activeTab === t.id
+                      ? 'border-primary text-navy'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
-          </>
-        )}
-      </main>
+          </div>
+
+          <div className="p-6 bg-background">
+            {activeTab === 0 && <SamenvattingTab input={result.input} kad={result.kad} />}
+            {activeTab === 1 && <MaxBodTab       input={result.input} kad={result.kad} />}
+            {activeTab === 2 && <VerhuurTab      input={result.input} kad={result.kad} />}
+            {activeTab === 3 && <VerkoopTab      input={result.input} kad={result.kad} />}
+            {activeTab === 4 && <BelastingTab    input={result.input} kad={result.kad} />}
+            {activeTab === 5 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
+          </div>
+        </>
+      )}
     </div>
   );
 }
