@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { AlertTriangle, History, Trash2, Building2 } from 'lucide-react';
 import type { PropertyInput, KadasterInfo, EnergyLabel } from '@/lib/calc-types';
 import { fmtEUR } from '@/lib/calculations';
+import { loadSessions, saveSession, deleteSession, clearSessions, type CalculatorSession } from '@/lib/calc-storage';
 import InputForm from '@/components/InputForm';
 import MaxBodTab from '@/components/calculators/MaxBodTab';
 import VerhuurTab from '@/components/calculators/VerhuurTab';
@@ -21,16 +22,16 @@ const TABS = [
   { id: 5, label: 'AI Analyse' },
 ];
 
-// ── Label pill ─────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function energielabelColor(label: EnergyLabel): string {
   switch (label) {
     case 'A+++': case 'A++': case 'A+': case 'A': return 'bg-positive/15 text-positive border-positive/30';
-    case 'B': return 'bg-positive/10 text-positive/80 border-positive/20';
-    case 'C': return 'bg-warning/15 text-warning border-warning/30';
-    case 'D': return 'bg-warning/20 text-warning border-warning/40';
+    case 'B':    return 'bg-positive/10 text-positive/80 border-positive/20';
+    case 'C':    return 'bg-warning/15 text-warning border-warning/30';
+    case 'D':    return 'bg-warning/20 text-warning border-warning/40';
     case 'E': case 'F': return 'bg-destructive/10 text-destructive border-destructive/25';
-    case 'G': return 'bg-destructive/15 text-destructive border-destructive/35';
-    default: return 'bg-muted text-muted-foreground border-border';
+    case 'G':    return 'bg-destructive/15 text-destructive border-destructive/35';
+    default:     return 'bg-muted text-muted-foreground border-border';
   }
 }
 
@@ -42,16 +43,117 @@ function Pill({ children, className = '' }: { children: React.ReactNode; classNa
   );
 }
 
-// ── Compact summary header ─────────────────────────────────────────────────────
-function SummaryBar({
-  input,
-  kad,
-  onReset,
+function relativeTime(ts: number): string {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (m < 1)  return 'Zojuist';
+  if (m < 60) return `${m} min`;
+  if (h < 24) return `${h} uur`;
+  return `${d}d`;
+}
+
+// ── History sidebar ────────────────────────────────────────────────────────────
+function HistorySidebar({
+  sessions,
+  activeId,
+  onSelect,
+  onDelete,
+  onClearAll,
 }: {
-  input: PropertyInput;
-  kad: KadasterInfo;
-  onReset: () => void;
+  sessions: CalculatorSession[];
+  activeId: string | null;
+  onSelect: (s: CalculatorSession) => void;
+  onDelete: (id: string) => void;
+  onClearAll: () => void;
 }) {
+  return (
+    <aside className="w-[240px] shrink-0 bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 border-r border-sidebar-border z-20 shadow-sidebar">
+      {/* Brand */}
+      <div className="px-4 py-4 border-b border-sidebar-border flex items-center gap-2.5">
+        <div className="size-8 rounded-md bg-navy flex items-center justify-center shrink-0">
+          <Building2 className="size-4 text-primary-foreground" strokeWidth={2.4} />
+        </div>
+        <div>
+          <div className="font-bold tracking-tight text-[14px] display text-navy">VastgoedAI</div>
+          <div className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Investment Terminal</div>
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-sidebar-border flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+          <History className="size-3" />
+          Opgeslagen
+        </div>
+        {sessions.length > 0 && (
+          <button
+            type="button"
+            onClick={onClearAll}
+            className="text-muted-foreground hover:text-destructive transition-colors"
+            title="Alles wissen"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Session list */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-1">
+        {sessions.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground/70 px-1 pt-1">
+            Analyses worden hier opgeslagen zodra je op &quot;Analyseer &amp; Bereken&quot; klikt.
+          </p>
+        ) : (
+          sessions.map(s => {
+            const active = s.id === activeId;
+            return (
+              <div
+                key={s.id}
+                onClick={() => onSelect(s)}
+                className={`group rounded-md px-2.5 py-2 cursor-pointer border transition-colors ${
+                  active
+                    ? 'bg-muted border-primary/40 shadow-[inset_2px_0_0_var(--primary)]'
+                    : 'border-transparent hover:bg-muted hover:border-border'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-medium text-foreground truncate leading-snug">
+                      {s.kad.officielAdres ?? s.input.adres}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5 tabular">
+                      <span className="text-[10px] text-navy font-semibold">{fmtEUR(s.input.vraagprijs)}</span>
+                      <span className="text-muted-foreground/50 text-[10px]">·</span>
+                      <span className="text-[10px] text-muted-foreground">{s.input.woonoppervlakte} m²</span>
+                      <span className="text-muted-foreground/50 text-[10px]">·</span>
+                      <span className="text-[10px] text-muted-foreground">{relativeTime(s.timestamp)}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); onDelete(s.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all shrink-0 mt-0.5"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="px-4 py-2.5 text-[9px] uppercase tracking-[0.15em] text-muted-foreground border-t border-sidebar-border">
+        Lokaal opgeslagen · max 25
+      </div>
+    </aside>
+  );
+}
+
+// ── Compact summary header ─────────────────────────────────────────────────────
+function SummaryBar({ input, kad, onReset }: { input: PropertyInput; kad: KadasterInfo; onReset: () => void }) {
   return (
     <div className="px-6 py-3 border-b border-border bg-card flex items-center gap-3 flex-wrap">
       <div className="flex-1 min-w-0">
@@ -85,7 +187,6 @@ function SummaryBar({
 // ── Samenvatting tab ───────────────────────────────────────────────────────────
 function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterInfo }) {
   const warnings: { msg: string; level: 'danger' | 'warn' | 'info' }[] = [];
-
   if (kad.isRijksmonument)
     warnings.push({ msg: 'Rijksmonument — verbouwing vereist vergunning Rijksdienst voor het Cultureel Erfgoed.', level: 'danger' });
   if (kad.beschermdGezicht)
@@ -99,18 +200,15 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
 
   return (
     <div className="space-y-4">
-      {/* Warnings */}
       {warnings.length > 0 && (
         <div className="space-y-2">
           {warnings.map((w, i) => (
             <div
               key={i}
               className={`flex items-start gap-2 text-sm rounded-md border px-3 py-2.5 ${
-                w.level === 'danger'
-                  ? 'bg-destructive/10 border-destructive/30 text-destructive'
-                  : w.level === 'warn'
-                    ? 'bg-warning/10 border-warning/30 text-warning'
-                    : 'bg-card border-border text-foreground/80'
+                w.level === 'danger' ? 'bg-destructive/10 border-destructive/30 text-destructive'
+                : w.level === 'warn' ? 'bg-warning/10 border-warning/30 text-warning'
+                : 'bg-card border-border text-foreground/80'
               }`}
             >
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
@@ -127,34 +225,28 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
           <table className="w-full text-sm">
             <tbody className="divide-y divide-border">
               {[
-                { k: 'Adres', v: input.adres },
-                { k: 'Vraagprijs', v: fmtEUR(input.vraagprijs) },
-                { k: 'WOZ waarde', v: input.wozWaarde > 0 ? fmtEUR(input.wozWaarde) : '—' },
-                { k: 'Woonoppervlakte', v: `${input.woonoppervlakte} m²` },
-                { k: 'Perceeloppervlakte', v: input.perceeloppervlakte !== null ? `${input.perceeloppervlakte} m²` : 'N.v.t.' },
-                { k: 'Bouwjaar', v: input.bouwjaar > 0 ? String(input.bouwjaar) : '—' },
-                { k: 'Energielabel', v: input.energielabel },
-                { k: 'Type woning', v: input.typeWoning.charAt(0).toUpperCase() + input.typeWoning.slice(1) },
-                { k: 'Aantal kamers', v: String(input.aantalKamers) },
-                { k: 'Conditie', v: input.conditie.replace('_', ' ').charAt(0).toUpperCase() + input.conditie.replace('_', ' ').slice(1) },
-                { k: 'Erfpacht', v: input.erfpacht ? 'Ja' : 'Nee' },
-                {
-                  k: 'Verbouwingskosten',
-                  v: input.renovatiekostenPerM2 !== null
+                { k: 'Adres',             v: input.adres },
+                { k: 'Vraagprijs',        v: fmtEUR(input.vraagprijs) },
+                { k: 'WOZ waarde',        v: input.wozWaarde > 0 ? fmtEUR(input.wozWaarde) : '—' },
+                { k: 'Woonoppervlakte',   v: `${input.woonoppervlakte} m²` },
+                { k: 'Perceeloppervlakte',v: input.perceeloppervlakte !== null ? `${input.perceeloppervlakte} m²` : 'N.v.t.' },
+                { k: 'Bouwjaar',          v: input.bouwjaar > 0 ? String(input.bouwjaar) : '—' },
+                { k: 'Energielabel',      v: input.energielabel },
+                { k: 'Type woning',       v: input.typeWoning.charAt(0).toUpperCase() + input.typeWoning.slice(1) },
+                { k: 'Aantal kamers',     v: String(input.aantalKamers) },
+                { k: 'Conditie',          v: input.conditie.replace('_', ' ').charAt(0).toUpperCase() + input.conditie.replace('_', ' ').slice(1) },
+                { k: 'Erfpacht',          v: input.erfpacht ? 'Ja' : 'Nee' },
+                { k: 'Verbouwingskosten', v: input.renovatiekostenPerM2 !== null
                     ? `€ ${input.renovatiekostenPerM2.toLocaleString('nl-NL')}/m² = ${fmtEUR(input.renovatiekostenPerM2 * input.woonoppervlakte)}`
-                    : '—'
-                },
-                {
-                  k: 'Referentieprijs buurt',
-                  v: input.referentieprijsPerM2 !== null
+                    : '—' },
+                { k: 'Referentieprijs',   v: input.referentieprijsPerM2 !== null
                     ? `€ ${input.referentieprijsPerM2.toLocaleString('nl-NL')}/m² = ${fmtEUR(input.referentieprijsPerM2 * input.woonoppervlakte)}`
-                    : '—'
-                },
-                { k: 'OVB', v: input.eigenGebruik ? 'Eigen gebruik (2%)' : 'Belegging (10,4%)' },
-                { k: 'Notariskosten', v: fmtEUR(input.notariskosten) },
-                { k: 'Taxatiekosten', v: fmtEUR(input.taxatiekosten) },
-                { k: 'Bouwkundige keuring', v: fmtEUR(input.bouwkundigeKeuring) },
-                { k: 'Overige kosten', v: input.overigeKosten > 0 ? fmtEUR(input.overigeKosten) : '—' },
+                    : '—' },
+                { k: 'OVB',               v: input.eigenGebruik ? 'Eigen gebruik (2%)' : 'Belegging (10,4%)' },
+                { k: 'Notariskosten',     v: fmtEUR(input.notariskosten) },
+                { k: 'Taxatiekosten',     v: fmtEUR(input.taxatiekosten) },
+                { k: 'Bouwkundige keur.', v: fmtEUR(input.bouwkundigeKeuring) },
+                { k: 'Overige kosten',    v: input.overigeKosten > 0 ? fmtEUR(input.overigeKosten) : '—' },
               ].map(row => (
                 <tr key={row.k}>
                   <td className="py-1.5 pr-3 text-muted-foreground">{row.k}</td>
@@ -165,7 +257,7 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
           </table>
         </div>
 
-        {/* Kadaster info */}
+        {/* Kadaster */}
         <div className="panel p-5">
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-3">Kadaster / BAG</div>
           {kad.found ? (
@@ -173,19 +265,19 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-border">
                   {[
-                    { k: 'Officieel adres', v: kad.officielAdres ?? '—' },
-                    { k: 'Woonplaats', v: kad.woonplaats ?? '—' },
-                    { k: 'Gemeente', v: kad.gemeente ?? '—' },
-                    { k: 'Buurt', v: kad.buurt ?? '—' },
-                    { k: 'BAG-id', v: kad.bagId ?? '—' },
-                    { k: 'Gebruiksdoel', v: kad.gebruiksdoel ?? '—' },
-                    { k: 'Status', v: kad.status ?? '—' },
-                    { k: 'Rijksmonument', v: kad.isRijksmonument ? 'Ja' : 'Nee' },
-                    { k: 'Beschermd gezicht', v: kad.beschermdGezicht ?? 'Nee' },
-                    { k: 'Splitsing (VBO\'s)', v: kad.vboCount !== undefined ? String(kad.vboCount) : '—' },
-                    { k: 'Officieel oppervlak', v: kad.officielSqm !== undefined ? `${kad.officielSqm} m²` : '—' },
-                    { k: 'Perceeloppervlak', v: kad.perceelOppervlakte !== undefined ? `${kad.perceelOppervlakte} m²` : '—' },
-                    { k: 'EP-label', v: kad.energielabelEP ?? '—' },
+                    { k: 'Officieel adres',    v: kad.officielAdres ?? '—' },
+                    { k: 'Woonplaats',         v: kad.woonplaats ?? '—' },
+                    { k: 'Gemeente',           v: kad.gemeente ?? '—' },
+                    { k: 'Buurt',              v: kad.buurt ?? '—' },
+                    { k: 'BAG-id',             v: kad.bagId ?? '—' },
+                    { k: 'Gebruiksdoel',       v: kad.gebruiksdoel ?? '—' },
+                    { k: 'Status',             v: kad.status ?? '—' },
+                    { k: 'Rijksmonument',      v: kad.isRijksmonument ? 'Ja' : 'Nee' },
+                    { k: 'Beschermd gezicht',  v: kad.beschermdGezicht ?? 'Nee' },
+                    { k: "Splitsing (VBO's)",  v: kad.vboCount !== undefined ? String(kad.vboCount) : '—' },
+                    { k: 'Officieel opp.',     v: kad.officielSqm !== undefined ? `${kad.officielSqm} m²` : '—' },
+                    { k: 'Perceeloppervlak',   v: kad.perceelOppervlakte !== undefined ? `${kad.perceelOppervlakte} m²` : '—' },
+                    { k: 'EP-label',           v: kad.energielabelEP ?? '—' },
                   ].map(row => (
                     <tr key={row.k}>
                       <td className="py-1.5 pr-3 text-muted-foreground">{row.k}</td>
@@ -194,8 +286,6 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                   ))}
                 </tbody>
               </table>
-
-              {/* WOZ history */}
               {kad.wozHistory.length > 0 && (
                 <div className="border-t border-border pt-3">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">WOZ-geschiedenis</div>
@@ -211,9 +301,7 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Geen BAG-data beschikbaar — adres niet gevonden in PDOK.
-            </p>
+            <p className="text-sm text-muted-foreground">Geen BAG-data beschikbaar.</p>
           )}
         </div>
       </div>
@@ -221,35 +309,61 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
   );
 }
 
-// ── Placeholder tab ────────────────────────────────────────────────────────────
-function PlaceholderTab() {
-  return (
-    <div className="panel p-8 text-center text-muted-foreground">
-      Komt binnenkort — verhuur / verkoop / belasting calculators
-    </div>
-  );
-}
-
 // ── Main CalculatorDashboard ───────────────────────────────────────────────────
 export default function CalculatorDashboard() {
-  const [result, setResult] = useState<{ input: PropertyInput; kad: KadasterInfo } | null>(null);
+  const [result,    setResult]    = useState<{ id: string; input: PropertyInput; kad: KadasterInfo } | null>(null);
   const [activeTab, setActiveTab] = useState(1);
+  const [sessions,  setSessions]  = useState<CalculatorSession[]>([]);
 
-  const handleCalculate = (inp: PropertyInput, kad: KadasterInfo) => {
-    setResult({ input: inp, kad });
+  // Load from localStorage after mount
+  useEffect(() => { setSessions(loadSessions()); }, []);
+
+  const handleCalculate = useCallback((inp: PropertyInput, kad: KadasterInfo) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const session: CalculatorSession = { id, timestamp: Date.now(), input: inp, kad };
+    saveSession(session);
+    setSessions(loadSessions());
+    setResult({ id, input: inp, kad });
     setActiveTab(1);
-  };
+  }, []);
 
-  const handleReset = () => {
+  const handleSelectSession = useCallback((s: CalculatorSession) => {
+    setResult({ id: s.id, input: s.input, kad: s.kad });
+    setActiveTab(1);
+  }, []);
+
+  const handleDeleteSession = useCallback((id: string) => {
+    deleteSession(id);
+    setSessions(loadSessions());
+    if (result?.id === id) setResult(null);
+  }, [result]);
+
+  const handleClearAll = useCallback(() => {
+    clearSessions();
+    setSessions([]);
+    setResult(null);
+  }, []);
+
+  const handleReset = useCallback(() => {
     setResult(null);
     setActiveTab(1);
-  };
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-background">
-      <main className="w-full">
+      {/* Sidebar with history */}
+      <HistorySidebar
+        sessions={sessions}
+        activeId={result?.id ?? null}
+        onSelect={handleSelectSession}
+        onDelete={handleDeleteSession}
+        onClearAll={handleClearAll}
+      />
+
+      {/* Main content */}
+      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
         {!result ? (
-          <div className="max-w-3xl mx-auto px-6 py-10">
+          <div className="max-w-3xl mx-auto px-6 py-10 w-full">
             <div className="mb-8">
               <div className="label-eyebrow mb-2">Vastgoed Calculator</div>
               <h1 className="display text-3xl font-extrabold text-navy">Investeringsanalyse</h1>
@@ -257,13 +371,10 @@ export default function CalculatorDashboard() {
                 Voer de woningdata in voor accurate berekeningen op basis van jouw eigen waardeschatting.
               </p>
             </div>
-            <InputForm
-              onCalculate={handleCalculate}
-            />
+            <InputForm onCalculate={handleCalculate} />
           </div>
         ) : (
           <>
-            {/* Compact header */}
             <SummaryBar input={result.input} kad={result.kad} onReset={handleReset} />
 
             {/* Tab bar */}
@@ -287,13 +398,13 @@ export default function CalculatorDashboard() {
             </div>
 
             {/* Tab content */}
-            <div className="p-6 bg-background">
+            <div className="p-6 bg-background flex-1">
               {activeTab === 0 && <SamenvattingTab input={result.input} kad={result.kad} />}
-              {activeTab === 1 && <MaxBodTab input={result.input} kad={result.kad} />}
-              {activeTab === 2 && <VerhuurTab input={result.input} kad={result.kad} />}
-              {activeTab === 3 && <VerkoopTab input={result.input} kad={result.kad} />}
-              {activeTab === 4 && <BelastingTab input={result.input} kad={result.kad} />}
-              {activeTab === 5 && <AIAnalyseTab input={result.input} kad={result.kad} />}
+              {activeTab === 1 && <MaxBodTab       input={result.input} kad={result.kad} />}
+              {activeTab === 2 && <VerhuurTab      input={result.input} kad={result.kad} />}
+              {activeTab === 3 && <VerkoopTab      input={result.input} kad={result.kad} />}
+              {activeTab === 4 && <BelastingTab    input={result.input} kad={result.kad} />}
+              {activeTab === 5 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
             </div>
           </>
         )}
