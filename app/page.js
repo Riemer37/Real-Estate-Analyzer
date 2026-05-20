@@ -1,5 +1,5 @@
-import Dashboard from '@/components/Dashboard';
+import CalculatorDashboard from '@/components/CalculatorDashboard';
 
 export default function Home() {
-  return <Dashboard />;
+  return <CalculatorDashboard />;
 }
