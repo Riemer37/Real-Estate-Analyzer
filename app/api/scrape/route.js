@@ -24,16 +24,35 @@ function extractStructured(html) {
       return null;
     }
 
-    const price  = deepFind(json, ['sellingPrice','koopprijs','askingPrice','listPrice']);
-    const sqm    = deepFind(json, ['livingArea','usableArea','oppervlakte','woonoppervlakte']);
-    const year   = deepFind(json, ['constructionYear','bouwjaar','yearOfConstruction']);
-    const energy = deepFind(json, ['energyLabel','energyClass','energieklasse']);
-    const rooms  = deepFind(json, ['numberOfRooms','aantalKamers','rooms']);
-    const street = deepFind(json, ['streetName','straatnaam','street']);
-    const hn     = deepFind(json, ['houseNumber','huisnummer']);
-    const hns    = deepFind(json, ['houseNumberSuffix','huisnummertoevoeging','suffix']);
-    const city   = deepFind(json, ['city','woonplaatsnaam','woonplaats','place']);
-    const erfp   = deepFind(json, ['groundLease','erfpacht','leasehold','isGroundLease']);
+    const priceRaw = deepFind(json, ['sellingPrice','koopprijs','askingPrice','listPrice']);
+    const sqmRaw   = deepFind(json, [
+      'livingArea','livingAreaSize','livingSpaceSize','netLivingArea','grossLivingArea',
+      'usableArea','floorArea','floorSize','objectSize','size',
+      'woonoppervlakte','oppervlakte','gebruiksoppervlakte','woonOppervlakte',
+    ]);
+    const yearRaw  = deepFind(json, ['constructionYear','bouwjaar','yearOfConstruction','buildYear']);
+    const energy   = deepFind(json, ['energyLabel','energyClass','energieklasse','energyLabelClass']);
+    const roomsRaw = deepFind(json, ['numberOfRooms','aantalKamers','rooms','roomCount']);
+    const street   = deepFind(json, ['streetName','straatnaam','street']);
+    const hn       = deepFind(json, ['houseNumber','huisnummer']);
+    const hns      = deepFind(json, ['houseNumberSuffix','huisnummertoevoeging','suffix']);
+    const city     = deepFind(json, ['city','woonplaatsnaam','woonplaats','place']);
+    const erfp     = deepFind(json, ['groundLease','erfpacht','leasehold','isGroundLease']);
+
+    const toNum = (v) => {
+      if (typeof v === 'number' && isFinite(v) && v > 0) return v;
+      if (typeof v === 'string') { const n = parseFloat(v.replace(/[^\d.]/g, '')); return isFinite(n) && n > 0 ? n : null; }
+      if (v && typeof v === 'object') { const inner = v.value ?? v.amount ?? v.size ?? v.area; return toNum(inner); }
+      return null;
+    };
+
+    $('script, style').remove();
+    const pageText = $.text();
+    const sqmFromText = () => {
+      const patterns = [/woonoppervlakte[^\d]*(\d{2,4})\s*m[²2]/i, /(\d{2,4})\s*m[²2]\s*(?:woon|living)/i];
+      for (const re of patterns) { const m = pageText.match(re); if (m) { const n = parseInt(m[1]); if (n >= 10 && n <= 2000) return n; } }
+      return null;
+    };
 
     const addressStr = street && hn
       ? `${street} ${hn}${hns ?? ''}, ${city ?? ''}`.trim().replace(/,$/, '')
@@ -45,11 +64,11 @@ function extractStructured(html) {
     if (erfp === false || erfp === 'Nee' || erfp === 'no')   erfpachtNorm = 'Nee';
 
     const result = {
-      price:    typeof price === 'number' ? price : null,
-      sqm:      typeof sqm   === 'number' ? sqm   : null,
-      year:     typeof year  === 'number' ? year  : null,
+      price:    toNum(priceRaw),
+      sqm:      toNum(sqmRaw) ?? sqmFromText(),
+      year:     toNum(yearRaw),
       energy:   energyNorm,
-      rooms:    typeof rooms === 'number' ? rooms : null,
+      rooms:    toNum(roomsRaw),
       address:  addressStr,
       erfpacht: erfpachtNorm,
     };

@@ -45,33 +45,73 @@ function deepFind(obj, keys, depth = 0) {
   return null;
 }
 
+// Coerce to number: handles numeric strings, { value: 85, unit: 'm²' } objects, etc.
+function toNum(v) {
+  if (typeof v === 'number' && isFinite(v) && v > 0) return v;
+  if (typeof v === 'string') {
+    const n = parseFloat(v.replace(/[^\d.]/g, ''));
+    return isFinite(n) && n > 0 ? n : null;
+  }
+  if (v && typeof v === 'object') {
+    const inner = v.value ?? v.amount ?? v.size ?? v.area ?? v.oppervlakte;
+    return toNum(inner);
+  }
+  return null;
+}
+
+// Regex fallback: extract living area from visible page text
+function sqmFromText(text) {
+  const patterns = [
+    /woonoppervlakte[^\d]*(\d{2,4})\s*m[²2]/i,
+    /woonopp(?:ervlakte)?[^\d]*(\d{2,4})/i,
+    /living\s*area[^\d]*(\d{2,4})/i,
+    /(\d{2,4})\s*m[²2]\s*(?:woon|living|gebruiks)/i,
+  ];
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m) { const n = parseInt(m[1]); if (n >= 10 && n <= 2000) return n; }
+  }
+  return null;
+}
+
 function extractStructured(html) {
   try {
     const $ = cheerio.load(html);
     const raw = $('script#__NEXT_DATA__').html();
     if (!raw) return null;
     const json = JSON.parse(raw);
-    const price  = deepFind(json, ['sellingPrice','koopprijs','askingPrice','listPrice','price']);
-    const sqm    = deepFind(json, ['livingArea','usableArea','floorArea','oppervlakte','woonoppervlakte']);
-    const year   = deepFind(json, ['constructionYear','bouwjaar','yearOfConstruction','yearBuilt']);
-    const energy = deepFind(json, ['energyLabel','energyClass','energieklasse','energieLabelKlasse']);
-    const rooms  = deepFind(json, ['numberOfRooms','aantalKamers','rooms','roomCount']);
-    const street = deepFind(json, ['streetName','straatnaam','street']);
-    const hn     = deepFind(json, ['houseNumber','huisnummer','houseNr']);
-    const hns    = deepFind(json, ['houseNumberSuffix','huisnummertoevoeging','suffix','addition']);
-    const city   = deepFind(json, ['city','woonplaatsnaam','woonplaats','place']);
-    const erfp   = deepFind(json, ['groundLease','erfpacht','leasehold','isGroundLease']);
+
+    const priceRaw = deepFind(json, ['sellingPrice','koopprijs','askingPrice','listPrice','price']);
+    const sqmRaw   = deepFind(json, [
+      'livingArea','livingAreaSize','livingSpaceSize','netLivingArea','grossLivingArea',
+      'usableArea','floorArea','floorSize','objectSize','size',
+      'woonoppervlakte','oppervlakte','gebruiksoppervlakte','woonOppervlakte',
+    ]);
+    const yearRaw  = deepFind(json, ['constructionYear','bouwjaar','yearOfConstruction','yearBuilt','buildYear']);
+    const energy   = deepFind(json, ['energyLabel','energyClass','energieklasse','energieLabelKlasse','energyLabelClass']);
+    const roomsRaw = deepFind(json, ['numberOfRooms','aantalKamers','rooms','roomCount','numberOfBedrooms']);
+    const street   = deepFind(json, ['streetName','straatnaam','street']);
+    const hn       = deepFind(json, ['houseNumber','huisnummer','houseNr']);
+    const hns      = deepFind(json, ['houseNumberSuffix','huisnummertoevoeging','suffix','addition']);
+    const city     = deepFind(json, ['city','woonplaatsnaam','woonplaats','place']);
+    const erfp     = deepFind(json, ['groundLease','erfpacht','leasehold','isGroundLease']);
+
     const address = street && hn ? `${street} ${hn}${hns ?? ''}, ${city ?? ''}`.trim().replace(/,$/, '') : null;
     const energyNorm = typeof energy === 'string' ? energy.trim().toUpperCase().replace(/^([A-G]).*/, '$1') : null;
     let erfpachtNorm = 'Onbekend';
     if (erfp === true  || erfp === 'Ja'  || erfp === 'yes') erfpachtNorm = 'Ja';
     if (erfp === false || erfp === 'Nee' || erfp === 'no')  erfpachtNorm = 'Nee';
+
+    // Plain text for regex fallbacks (scripts stripped)
+    $('script, style').remove();
+    const pageText = $.text();
+
     const result = {
-      price:    typeof price === 'number' ? price : null,
-      sqm:      typeof sqm   === 'number' ? sqm   : null,
-      year:     typeof year  === 'number' ? year  : null,
+      price:    toNum(priceRaw),
+      sqm:      toNum(sqmRaw) ?? sqmFromText(pageText),
+      year:     toNum(yearRaw),
       energy:   energyNorm,
-      rooms:    typeof rooms === 'number' ? rooms : null,
+      rooms:    toNum(roomsRaw),
       address,
       erfpacht: erfpachtNorm,
     };
