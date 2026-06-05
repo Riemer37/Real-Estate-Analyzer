@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import type { PropertyInput, KadasterInfo, EnergyLabel, WoningType, Conditie } from '@/lib/calc-types';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 const INPUT_CLS = 'w-full bg-background border border-border rounded-md px-3 py-2 tabular text-sm';
 const SELECT_CLS = 'w-full bg-background border border-border rounded-md px-3 py-2 tabular text-sm';
@@ -56,8 +57,9 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
   const set = <K extends keyof PropertyInput>(k: K, v: PropertyInput[K]) =>
     setInput(prev => ({ ...prev, [k]: v }));
 
-  const handleBagSearch = async () => {
-    if (!input.adres.trim()) return;
+  const handleBagSearch = async (addressOverride?: string) => {
+    const addr = addressOverride ?? input.adres;
+    if (!addr.trim()) return;
     setBagLoading(true);
     setBagError(null);
     setKad(null);
@@ -67,7 +69,7 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
       const res = await fetch('/api/kadaster-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: input.adres }),
+        body: JSON.stringify({ address: addr }),
       });
       const data = await res.json();
 
@@ -148,18 +150,21 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
 
         <div className="space-y-1.5">
           <label className={LABEL_CLS}>Adres</label>
-          <input
-            type="text"
+          <AddressAutocomplete
             value={input.adres}
-            onChange={e => set('adres', e.target.value)}
-            placeholder="Bijv. Keizersgracht 123, Amsterdam"
+            onChange={v => set('adres', v)}
+            onSelect={s => {
+              set('adres', s.weergavenaam);
+              handleBagSearch(s.weergavenaam);
+            }}
             className={INPUT_CLS}
           />
+          <p className="text-[11px] text-muted-foreground">Typ minimaal 3 tekens voor suggesties · BAG wordt automatisch opgezocht bij selectie</p>
         </div>
 
         <button
           type="button"
-          onClick={handleBagSearch}
+          onClick={() => handleBagSearch()}
           disabled={bagLoading || !input.adres.trim()}
           className="flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
         >
