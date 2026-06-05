@@ -17,8 +17,11 @@ export default function UpgradeButton() {
     );
   }
 
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
   const handleCheckout = async (annual: boolean) => {
     setLoading(true);
+    setCheckoutError(null);
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -26,7 +29,13 @@ export default function UpgradeButton() {
         body: JSON.stringify({ annual }),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setCheckoutError(data.error ?? 'Er ging iets mis. Probeer opnieuw.');
+      }
+    } catch {
+      setCheckoutError('Verbindingsfout. Probeer opnieuw.');
     } finally {
       setLoading(false);
     }
@@ -50,6 +59,9 @@ export default function UpgradeButton() {
 
   return (
     <div className="space-y-2">
+      {checkoutError && (
+        <p className="text-xs text-destructive text-center px-2">{checkoutError}</p>
+      )}
       <button
         type="button"
         onClick={() => handleCheckout(false)}

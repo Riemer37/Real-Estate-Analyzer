@@ -15,8 +15,9 @@ const PRO_FEATURES = [
   'Portfolio overzicht — binnenkort',
 ];
 
-export default function PricingPage({ searchParams }) {
-  const success = searchParams?.success === 'true';
+export default async function PricingPage({ searchParams }) {
+  const params = await searchParams;
+  const success = params?.success === 'true';
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-16">

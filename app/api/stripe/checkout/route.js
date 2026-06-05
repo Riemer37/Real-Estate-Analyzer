@@ -2,7 +2,10 @@ import Stripe from 'stripe';
 import { auth } from '@clerk/nextjs/server';
 
 export async function POST(req) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '');
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return Response.json({ error: 'Stripe is nog niet geconfigureerd. Voeg STRIPE_SECRET_KEY toe aan .env.local.' }, { status: 503 });
+  }
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   const { userId } = await auth();
   if (!userId) {
     return Response.json({ error: 'Inloggen vereist' }, { status: 401 });
