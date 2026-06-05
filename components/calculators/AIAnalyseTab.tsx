@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useUser } from '@clerk/nextjs';
+import ProGate from '@/components/ProGate';
 import type { PropertyInput, KadasterInfo } from '@/lib/calc-types';
 
 interface AIResult {
@@ -49,9 +51,27 @@ function Spinner() {
 }
 
 export default function AIAnalyseTab({ input, kad }: AIAnalyseTabProps) {
+  const { user, isLoaded } = useUser();
+  const isPro = user?.publicMetadata?.isPro === true;
+
   const [result, setResult] = useState<AIResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Loading state while Clerk resolves auth
+  if (!isLoaded) {
+    return <div className="panel p-8 animate-pulse h-32 rounded-xl" />;
+  }
+
+  // Pro gate — show upgrade prompt for free users
+  if (!isPro) {
+    return (
+      <ProGate
+        feature="AI Investeringsanalyse"
+        description="Claude AI analyseert het object en geeft een investeringsthese, risicotoelichting en transformatieadvies — alleen op basis van jouw ingevoerde data."
+      />
+    );
+  }
 
   const handleGenerate = async () => {
     setLoading(true);

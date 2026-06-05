@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 
 export const maxDuration = 30;
 
@@ -6,6 +7,17 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(request) {
   try {
+    // Server-side pro check (defence-in-depth — client also gates)
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Inloggen vereist voor AI analyse' }, { status: 401 });
+    }
+    const clerk = await clerkClient();
+    const user = await clerk.users.getUser(userId);
+    if (!user.publicMetadata?.isPro) {
+      return Response.json({ error: 'Pro abonnement vereist voor AI analyse' }, { status: 403 });
+    }
+
     const { input, kad } = await request.json();
 
     const renovatietotaal = input.renovatiekostenPerM2

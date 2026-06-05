@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, Trash2, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, Trash2, Clock, Sparkles } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 import type { PropertyInput, KadasterInfo, EnergyLabel } from '@/lib/calc-types';
 import { fmtEUR } from '@/lib/calculations';
 import { loadSessions, saveSession, deleteSession, clearSessions, type CalculatorSession } from '@/lib/calc-storage';
@@ -11,6 +13,8 @@ import VerhuurTab from '@/components/calculators/VerhuurTab';
 import VerkoopTab from '@/components/calculators/VerkoopTab';
 import BelastingTab from '@/components/calculators/BelastingTab';
 import AIAnalyseTab from '@/components/calculators/AIAnalyseTab';
+
+const FREE_SAVE_LIMIT = 5;
 
 const TABS = [
   { id: 0, label: 'Samenvatting' },
@@ -59,12 +63,14 @@ function HistoryList({
   onSelect,
   onDelete,
   onClearAll,
+  isPro,
 }: {
   sessions: CalculatorSession[];
   activeId: string | null;
   onSelect: (s: CalculatorSession) => void;
   onDelete: (id: string) => void;
   onClearAll: () => void;
+  isPro: boolean;
 }) {
   if (sessions.length === 0) return null;
 
@@ -74,6 +80,11 @@ function HistoryList({
         <div className="flex items-center gap-1.5 label-eyebrow">
           <Clock className="size-3" />
           Opgeslagen analyses
+          {!isPro && (
+            <span className="ml-1 text-[11px] font-normal text-muted-foreground/70 normal-case tracking-normal">
+              ({sessions.length}/{FREE_SAVE_LIMIT})
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -283,6 +294,9 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
 
 // ── Main CalculatorDashboard ───────────────────────────────────────────────────
 export default function CalculatorDashboard() {
+  const { user } = useUser();
+  const isPro = user?.publicMetadata?.isPro === true;
+
   const [result,    setResult]    = useState<{ id: string; input: PropertyInput; kad: KadasterInfo } | null>(null);
   const [activeTab, setActiveTab] = useState(1);
   const [sessions,  setSessions]  = useState<CalculatorSession[]>([]);
@@ -291,12 +305,18 @@ export default function CalculatorDashboard() {
 
   const handleCalculate = useCallback((inp: PropertyInput, kad: KadasterInfo) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const session: CalculatorSession = { id, timestamp: Date.now(), input: inp, kad };
-    saveSession(session);
-    setSessions(loadSessions());
+    const currentSessions = loadSessions();
+
+    // Only save within the free tier limit
+    if (isPro || currentSessions.length < FREE_SAVE_LIMIT) {
+      const session: CalculatorSession = { id, timestamp: Date.now(), input: inp, kad };
+      saveSession(session);
+      setSessions(loadSessions());
+    }
+
     setResult({ id, input: inp, kad });
     setActiveTab(1);
-  }, []);
+  }, [isPro]);
 
   const handleSelectSession = useCallback((s: CalculatorSession) => {
     setResult({ id: s.id, input: s.input, kad: s.kad });
@@ -341,8 +361,27 @@ export default function CalculatorDashboard() {
               onSelect={handleSelectSession}
               onDelete={handleDeleteSession}
               onClearAll={handleClearAll}
+              isPro={isPro}
             />
           </div>
+
+          {/* Save-limiet banner voor gratis gebruikers */}
+          {!isPro && sessions.length >= FREE_SAVE_LIMIT && (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-warning/30 bg-warning/5 px-4 py-2.5 text-sm">
+              <div className="flex items-center gap-2 text-warning">
+                <Sparkles className="size-4 shrink-0" />
+                <span>
+                  Je hebt de limiet van {FREE_SAVE_LIMIT} opgeslagen analyses bereikt — nieuwe analyses worden niet opgeslagen.
+                </span>
+              </div>
+              <Link
+                href="/pricing"
+                className="shrink-0 text-xs font-bold text-primary hover:underline"
+              >
+                Upgrade →
+              </Link>
+            </div>
+          )}
 
           <InputForm onCalculate={handleCalculate} />
         </div>
