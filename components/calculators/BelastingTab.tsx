@@ -72,7 +72,6 @@ export default function BelastingTab({ input, kad }: BelastingTabProps) {
     // Locatie
     let locatie = 5;
     if (GROTE_STEDEN.includes(kad.gemeente ?? '')) locatie -= 1;
-    if (input.bouwjaar > 0 && input.bouwjaar < 1940) locatie += 1;
     if (input.erfpacht) locatie += 1;
     locatie = Math.min(10, Math.max(1, locatie));
 
@@ -91,7 +90,6 @@ export default function BelastingTab({ input, kad }: BelastingTabProps) {
     else if (wozRatio > 1.2) markt = 6;
     else if (wozRatio > 0.9) markt = 4;
     else markt = 3;
-    if (input.bouwjaar > 0 && input.bouwjaar < 1960) markt += 1;
     markt = Math.min(10, Math.max(1, markt));
 
     // Liquiditeit
@@ -236,7 +234,6 @@ export default function BelastingTab({ input, kad }: BelastingTabProps) {
                 <span className="font-medium text-foreground">Locatie:</span>
                 <span>
                   {GROTE_STEDEN.includes(kad.gemeente ?? '') ? 'Grote stad (−1)' : 'Overige gemeente'}
-                  {input.bouwjaar > 0 && input.bouwjaar < 1940 ? ' · Bouwjaar <1940 (+1)' : ''}
                   {input.erfpacht ? ' · Erfpacht (+1)' : ''}
                 </span>
               </div>
@@ -251,7 +248,6 @@ export default function BelastingTab({ input, kad }: BelastingTabProps) {
                 <span className="font-medium text-foreground">Markt:</span>
                 <span>
                   Vraagprijs/WOZ = {input.wozWaarde > 0 ? (input.vraagprijs / input.wozWaarde).toFixed(2) : '—'}×
-                  {input.bouwjaar > 0 && input.bouwjaar < 1960 ? ' · Bouwjaar <1960 (+1)' : ''}
                 </span>
               </div>
               <div className="flex gap-1">

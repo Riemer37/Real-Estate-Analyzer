@@ -1,13 +1,13 @@
 export type EnergyLabel = 'A+++'|'A++'|'A+'|'A'|'B'|'C'|'D'|'E'|'F'|'G'|'Onbekend';
 export type WoningType = 'tussenwoning'|'hoekwoning'|'vrijstaand'|'appartement'|'bovenwoning'|'commercieel';
 export type Conditie = 'uitstekend'|'goed'|'redelijk'|'slecht'|'te_renoveren';
+export type Bestemmingsplan = 'wonen'|'gemengd'|'commercieel'|'bedrijf'|'agrarisch'|'onbekend';
 
 export interface PropertyInput {
   adres: string;
   vraagprijs: number;
   woonoppervlakte: number;
   perceeloppervlakte: number | null;
-  bouwjaar: number;
   energielabel: EnergyLabel;
   typeWoning: WoningType;
   aantalKamers: number;
@@ -23,6 +23,12 @@ export interface PropertyInput {
   overigeKosten: number;
   // Market reference price for ARV — shared by MaxBodTab and VerkoopTab
   referentieprijsPerM2: number | null;
+  // Investment profile — used for AI analysis
+  bestemmingsplan: Bestemmingsplan;
+  verwachteHuurprijs: number | null;
+  vveKosten: number | null;
+  eigenVermogenPct: number;
+  gewenstRendement: number;
 }
 
 export interface KadasterInfo {

@@ -24,29 +24,44 @@ export async function POST(request) {
   const renovatietotaal = input.renovatiekostenPerM2
     ? input.renovatiekostenPerM2 * input.woonoppervlakte
     : null;
+  const renovatietotaalStr = renovatietotaal
+    ? `€${input.renovatiekostenPerM2.toLocaleString('nl-NL')}/m² = €${renovatietotaal.toLocaleString('nl-NL')} totaal`
+    : 'Niet opgegeven';
+
+  const arvTotaal = input.referentieprijsPerM2 && input.woonoppervlakte
+    ? input.referentieprijsPerM2 * input.woonoppervlakte
+    : null;
 
   const context = `
-Woningdata (ingevoerd door gebruiker):
+OBJECT DATA (ingevoerd door gebruiker + BAG/Kadaster):
 - Adres: ${input.adres}
-- Type: ${input.typeWoning}
+- Gemeente: ${kad.gemeente ?? '—'} | Buurt: ${kad.buurt ?? '—'}
+- Type woning: ${input.typeWoning}
 - Vraagprijs: €${input.vraagprijs.toLocaleString('nl-NL')}
 - WOZ waarde: €${input.wozWaarde.toLocaleString('nl-NL')}
+- WOZ trend (officieel): ${kad.wozHistory.slice(0, 3).map(w => w.jaar + ': €' + w.waarde.toLocaleString('nl-NL')).join(', ')}
 - Woonoppervlakte: ${input.woonoppervlakte}m²
 - Perceeloppervlakte: ${input.perceeloppervlakte ? input.perceeloppervlakte + 'm²' : 'N.v.t.'}
-- Bouwjaar: ${input.bouwjaar}
 - Energielabel: ${input.energielabel}
 - Aantal kamers: ${input.aantalKamers}
 - Staat van onderhoud: ${input.conditie}
 - Erfpacht: ${input.erfpacht ? 'Ja' : 'Nee'}
-- Verbouwingskosten: ${renovatietotaal ? '€' + input.renovatiekostenPerM2.toLocaleString('nl-NL') + '/m² = €' + renovatietotaal.toLocaleString('nl-NL') + ' totaal' : 'Niet opgegeven'}
-
-Kadaster/BAG data:
-- Officieel adres: ${kad.officielAdres ?? 'Niet gevonden'}
-- Gemeente: ${kad.gemeente ?? '—'}
 - Rijksmonument: ${kad.isRijksmonument ? 'Ja' : 'Nee'}
 - Beschermd gezicht: ${kad.beschermdGezicht ?? 'Nee'}
 - Splitsingstatus: ${kad.isSplit ? 'Gesplitst (' + kad.vboCount + ' eenheden)' : 'Niet gesplitst'}
-- WOZ trend: ${kad.wozHistory.slice(0, 3).map(w => w.jaar + ': €' + w.waarde.toLocaleString('nl-NL')).join(', ')}
+- Gebruiksdoel BAG: ${kad.gebruiksdoel ?? 'Onbekend'}
+
+FINANCIËLE INVOER:
+- Verbouwingskosten: ${renovatietotaalStr}
+- Referentieprijs vergelijkbare panden: ${arvTotaal ? '€' + input.referentieprijsPerM2.toLocaleString('nl-NL') + '/m² → ARV €' + arvTotaal.toLocaleString('nl-NL') : 'Niet opgegeven'}
+- Aankoopkosten: OVB ${input.eigenGebruik ? '2%' : '10,4%'}, notaris €${input.notariskosten.toLocaleString('nl-NL')}, taxatie €${input.taxatiekosten.toLocaleString('nl-NL')}, keuring €${input.bouwkundigeKeuring.toLocaleString('nl-NL')}, overig €${input.overigeKosten.toLocaleString('nl-NL')}
+
+INVESTERINGSPROFIEL (gebruiker):
+- Bestemmingsplan: ${input.bestemmingsplan}
+- Verwachte huurprijs: ${input.verwachteHuurprijs ? '€' + input.verwachteHuurprijs.toLocaleString('nl-NL') + '/maand (= €' + (input.verwachteHuurprijs * 12).toLocaleString('nl-NL') + '/jaar)' : 'Niet opgegeven'}
+- VvE kosten: ${input.vveKosten ? '€' + input.vveKosten.toLocaleString('nl-NL') + '/maand' : 'Geen / N.v.t.'}
+- Eigen vermogen: ${input.eigenVermogenPct}% van aankoopprijs
+- Gewenst rendement: ${input.gewenstRendement}% per jaar
 `;
 
   const stream = client.messages.stream({

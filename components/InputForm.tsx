@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
-import type { PropertyInput, KadasterInfo, EnergyLabel, WoningType, Conditie } from '@/lib/calc-types';
+import type { PropertyInput, KadasterInfo, EnergyLabel, WoningType, Conditie, Bestemmingsplan } from '@/lib/calc-types';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 const INPUT_CLS = 'w-full bg-background border border-border rounded-md px-3 py-2 tabular text-sm';
@@ -15,7 +15,6 @@ const DEFAULT_INPUT: PropertyInput = {
   vraagprijs: 0,
   woonoppervlakte: 0,
   perceeloppervlakte: null,
-  bouwjaar: 0,
   energielabel: 'C',
   typeWoning: 'tussenwoning',
   aantalKamers: 4,
@@ -29,6 +28,11 @@ const DEFAULT_INPUT: PropertyInput = {
   bouwkundigeKeuring: 400,
   overigeKosten: 0,
   referentieprijsPerM2: null,
+  bestemmingsplan: 'onbekend',
+  verwachteHuurprijs: null,
+  vveKosten: null,
+  eigenVermogenPct: 30,
+  gewenstRendement: 8,
 };
 
 interface InputFormProps {
@@ -128,8 +132,7 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
   const isValid =
     input.adres.trim() !== '' &&
     input.vraagprijs > 0 &&
-    input.woonoppervlakte > 0 &&
-    input.bouwjaar > 0;
+    input.woonoppervlakte > 0;
 
   const handleSubmit = () => {
     if (!isValid) return;
@@ -442,19 +445,6 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
           </div>
 
           <div className="space-y-1.5">
-            <label className={LABEL_CLS}>Bouwjaar</label>
-            <input
-              type="number"
-              value={numVal(input.bouwjaar)}
-              onChange={e => set('bouwjaar', parseNum(e.target.value))}
-              placeholder="1975"
-              min={1500}
-              max={new Date().getFullYear() + 5}
-              className={INPUT_CLS}
-            />
-          </div>
-
-          <div className="space-y-1.5">
             <label className={LABEL_CLS}>Energielabel</label>
             <select
               value={input.energielabel}
@@ -532,6 +522,86 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
                 {input.erfpacht ? 'Ja — erfpacht' : 'Nee — eigen grond'}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Investeringsprofiel — voor AI analyse */}
+      <div className="panel p-5 space-y-4">
+        <div className={SECTION_HDR}>Investeringsprofiel <span className="normal-case font-normal text-muted-foreground/70 ml-1">— voor AI analyse</span></div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Bestemmingsplan</label>
+            <select
+              value={input.bestemmingsplan}
+              onChange={e => set('bestemmingsplan', e.target.value as Bestemmingsplan)}
+              className={SELECT_CLS}
+            >
+              <option value="onbekend">Onbekend</option>
+              <option value="wonen">Wonen</option>
+              <option value="gemengd">Gemengd (wonen + commercieel)</option>
+              <option value="commercieel">Commercieel</option>
+              <option value="bedrijf">Bedrijf</option>
+              <option value="agrarisch">Agrarisch</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Verwachte huurprijs (€/maand)</label>
+            <input
+              type="number"
+              value={input.verwachteHuurprijs === null ? '' : input.verwachteHuurprijs}
+              onChange={e => set('verwachteHuurprijs', e.target.value === '' ? null : parseNum(e.target.value))}
+              placeholder="bijv. 1500"
+              min={0}
+              className={INPUT_CLS}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Eigen vermogen (% van aankoop)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={input.eigenVermogenPct}
+                onChange={e => set('eigenVermogenPct', parseNum(e.target.value))}
+                placeholder="30"
+                min={0}
+                max={100}
+                className={INPUT_CLS}
+              />
+              <span className="text-sm text-muted-foreground shrink-0">%</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Hoeveel % financier je zelf?</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Gewenst rendement</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={input.gewenstRendement}
+                onChange={e => set('gewenstRendement', parseNum(e.target.value))}
+                placeholder="8"
+                min={0}
+                max={100}
+                className={INPUT_CLS}
+              />
+              <span className="text-sm text-muted-foreground shrink-0">%</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>VvE kosten (€/maand)</label>
+            <input
+              type="number"
+              value={input.vveKosten === null ? '' : input.vveKosten}
+              onChange={e => set('vveKosten', e.target.value === '' ? null : parseNum(e.target.value))}
+              placeholder="Leeg = geen VvE"
+              min={0}
+              className={INPUT_CLS}
+            />
           </div>
         </div>
       </div>

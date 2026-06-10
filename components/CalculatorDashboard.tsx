@@ -214,7 +214,7 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                 { k: 'WOZ waarde',        v: input.wozWaarde > 0 ? fmtEUR(input.wozWaarde) : '—' },
                 { k: 'Woonoppervlakte',   v: `${input.woonoppervlakte} m²` },
                 { k: 'Perceeloppervlakte',v: input.perceeloppervlakte !== null ? `${input.perceeloppervlakte} m²` : 'N.v.t.' },
-                { k: 'Bouwjaar',          v: input.bouwjaar > 0 ? String(input.bouwjaar) : '—' },
+
                 { k: 'Energielabel',      v: input.energielabel },
                 { k: 'Type woning',       v: input.typeWoning.charAt(0).toUpperCase() + input.typeWoning.slice(1) },
                 { k: 'Aantal kamers',     v: String(input.aantalKamers) },
