@@ -26,9 +26,6 @@ export interface PropertyInput {
   // Investment profile — used for AI analysis
   bestemmingsplan: Bestemmingsplan;
   verwachteHuurprijs: number | null;
-  vveKosten: number | null;
-  eigenVermogenPct: number;
-  gewenstRendement: number;
 }
 
 export interface KadasterInfo {

@@ -67,6 +67,7 @@ export default function AIAnalyseTab({ input, kad }: AIAnalyseTabProps) {
   const [result, setResult] = useState<AIResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gewenstRendement, setGewenstRendement] = useState(8);
 
   if (!isLoaded) return <div className="panel p-8 animate-pulse h-32 rounded-xl" />;
   if (!isPro) {
@@ -86,7 +87,7 @@ export default function AIAnalyseTab({ input, kad }: AIAnalyseTabProps) {
       const res = await fetch('/api/ai-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input, kad }),
+        body: JSON.stringify({ input, kad, gewenstRendement }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -118,14 +119,15 @@ export default function AIAnalyseTab({ input, kad }: AIAnalyseTabProps) {
     <div className="space-y-5">
 
       {/* Header + trigger */}
-      <div className="panel p-5 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">AI Investeringsanalyse — Pro</div>
-          <p className="text-sm text-muted-foreground max-w-lg">
-            Claude Sonnet evalueert alle 10 investeringsstrategieën op basis van jouw ingevoerde data en geeft een concreet advies.
-          </p>
-        </div>
-        <button
+      <div className="panel p-5 space-y-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">AI Investeringsanalyse — Pro</div>
+            <p className="text-sm text-muted-foreground max-w-lg">
+              Claude Sonnet evalueert alle 10 investeringsstrategieën op basis van jouw ingevoerde data en geeft een concreet advies.
+            </p>
+          </div>
+          <button
           type="button"
           onClick={handleGenerate}
           disabled={loading}
@@ -133,7 +135,23 @@ export default function AIAnalyseTab({ input, kad }: AIAnalyseTabProps) {
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : <TrendingUp className="size-4" />}
           {loading ? 'AI analyseert (30–60s)...' : result ? 'Opnieuw analyseren' : 'Genereer analyse'}
-        </button>
+          </button>
+        </div>
+
+        {/* Gewenst rendement */}
+        <div className="flex items-center gap-4 pt-1 border-t border-border">
+          <div className="text-xs font-medium text-muted-foreground shrink-0">Gewenst rendement</div>
+          <input
+            type="range"
+            min={3}
+            max={25}
+            step={0.5}
+            value={gewenstRendement}
+            onChange={e => setGewenstRendement(parseFloat(e.target.value))}
+            className="flex-1 accent-navy"
+          />
+          <div className="text-sm font-bold tabular w-12 text-right">{gewenstRendement}%</div>
+        </div>
       </div>
 
       {/* Error */}

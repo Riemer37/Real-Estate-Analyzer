@@ -30,9 +30,6 @@ const DEFAULT_INPUT: PropertyInput = {
   referentieprijsPerM2: null,
   bestemmingsplan: 'onbekend',
   verwachteHuurprijs: null,
-  vveKosten: null,
-  eigenVermogenPct: 30,
-  gewenstRendement: 8,
 };
 
 interface InputFormProps {
@@ -559,50 +556,6 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className={LABEL_CLS}>Eigen vermogen (% van aankoop)</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={input.eigenVermogenPct}
-                onChange={e => set('eigenVermogenPct', parseNum(e.target.value))}
-                placeholder="30"
-                min={0}
-                max={100}
-                className={INPUT_CLS}
-              />
-              <span className="text-sm text-muted-foreground shrink-0">%</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground">Hoeveel % financier je zelf?</p>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className={LABEL_CLS}>Gewenst rendement</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={input.gewenstRendement}
-                onChange={e => set('gewenstRendement', parseNum(e.target.value))}
-                placeholder="8"
-                min={0}
-                max={100}
-                className={INPUT_CLS}
-              />
-              <span className="text-sm text-muted-foreground shrink-0">%</span>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className={LABEL_CLS}>VvE kosten (€/maand)</label>
-            <input
-              type="number"
-              value={input.vveKosten === null ? '' : input.vveKosten}
-              onChange={e => set('vveKosten', e.target.value === '' ? null : parseNum(e.target.value))}
-              placeholder="Leeg = geen VvE"
-              min={0}
-              className={INPUT_CLS}
-            />
-          </div>
         </div>
       </div>
 

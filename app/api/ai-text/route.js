@@ -19,7 +19,7 @@ export async function POST(request) {
   }
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const { input, kad } = await request.json();
+  const { input, kad, gewenstRendement = 8 } = await request.json();
 
   const renovatietotaal = input.renovatiekostenPerM2
     ? input.renovatiekostenPerM2 * input.woonoppervlakte
@@ -59,9 +59,7 @@ FINANCIËLE INVOER:
 INVESTERINGSPROFIEL (gebruiker):
 - Bestemmingsplan: ${input.bestemmingsplan}
 - Verwachte huurprijs: ${input.verwachteHuurprijs ? '€' + input.verwachteHuurprijs.toLocaleString('nl-NL') + '/maand (= €' + (input.verwachteHuurprijs * 12).toLocaleString('nl-NL') + '/jaar)' : 'Niet opgegeven'}
-- VvE kosten: ${input.vveKosten ? '€' + input.vveKosten.toLocaleString('nl-NL') + '/maand' : 'Geen / N.v.t.'}
-- Eigen vermogen: ${input.eigenVermogenPct}% van aankoopprijs
-- Gewenst rendement: ${input.gewenstRendement}% per jaar
+- Gewenst rendement: ${gewenstRendement}% per jaar
 `;
 
   const stream = client.messages.stream({
