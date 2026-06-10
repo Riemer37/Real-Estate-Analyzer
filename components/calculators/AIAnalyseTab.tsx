@@ -91,7 +91,19 @@ export default function AIAnalyseTab({ input, kad }: AIAnalyseTabProps) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
-      const data = await res.json();
+      if (!res.body) throw new Error('Geen response body');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let text = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+
+      const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] ?? text;
+      const data = JSON.parse(jsonStr);
       if (data.error) throw new Error(data.error);
       setResult(data as AIResult);
     } catch (e: unknown) {

@@ -4,30 +4,28 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 export const maxDuration = 60;
 
 export async function POST(request) {
-  try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return Response.json({ error: 'ANTHROPIC_API_KEY niet geconfigureerd' }, { status: 503 });
-    }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return Response.json({ error: 'ANTHROPIC_API_KEY niet geconfigureerd' }, { status: 503 });
+  }
 
-    // Server-side pro check (defence-in-depth — client also gates)
-    const { userId } = await auth();
-    if (!userId) {
-      return Response.json({ error: 'Inloggen vereist voor AI analyse' }, { status: 401 });
-    }
-    const clerk = await clerkClient();
-    const user = await clerk.users.getUser(userId);
-    if (!user.publicMetadata?.isPro) {
-      return Response.json({ error: 'Pro abonnement vereist voor AI analyse' }, { status: 403 });
-    }
+  const { userId } = await auth();
+  if (!userId) {
+    return Response.json({ error: 'Inloggen vereist voor AI analyse' }, { status: 401 });
+  }
+  const clerk = await clerkClient();
+  const user = await clerk.users.getUser(userId);
+  if (!user.publicMetadata?.isPro) {
+    return Response.json({ error: 'Pro abonnement vereist voor AI analyse' }, { status: 403 });
+  }
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const { input, kad } = await request.json();
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const { input, kad } = await request.json();
 
-    const renovatietotaal = input.renovatiekostenPerM2
-      ? input.renovatiekostenPerM2 * input.woonoppervlakte
-      : null;
+  const renovatietotaal = input.renovatiekostenPerM2
+    ? input.renovatiekostenPerM2 * input.woonoppervlakte
+    : null;
 
-    const context = `
+  const context = `
 Woningdata (ingevoerd door gebruiker):
 - Adres: ${input.adres}
 - Type: ${input.typeWoning}
@@ -51,13 +49,13 @@ Kadaster/BAG data:
 - WOZ trend: ${kad.wozHistory.slice(0, 3).map(w => w.jaar + ': €' + w.waarde.toLocaleString('nl-NL')).join(', ')}
 `;
 
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2500,
-      temperature: 0.3,
-      messages: [{
-        role: 'user',
-        content: `Je bent een senior vastgoed investment analyst voor de Nederlandse markt.
+  const stream = client.messages.stream({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 4000,
+    temperature: 0.3,
+    messages: [{
+      role: 'user',
+      content: `Je bent een senior vastgoed investment analyst voor de Nederlandse markt.
 Analyseer het volgende pand en evalueer alle 10 investeringsstrategieën.
 Geef je output als GELDIG JSON (geen markdown, geen code fences, direct JSON).
 
@@ -108,28 +106,26 @@ Regels:
 - risico moet zijn: "laag", "middel" of "hoog"
 - Geef voor ALLE 10 strategieën een beoordeling, ook als ze niet haalbaar zijn
 - max_bod baseert op de opgegeven vraagprijs en verbouwingskosten`,
-      }],
-    });
+    }],
+  });
 
-    const text = msg.content[0].text;
+  const readable = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      try {
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+            controller.enqueue(encoder.encode(event.delta.text));
+          }
+        }
+      } catch (e) {
+        controller.error(e);
+      }
+      controller.close();
+    },
+  });
 
-    let parsed = {};
-    try {
-      const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] ?? text;
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      parsed = {
-        samenvatting: text,
-        strategieen: [],
-        top3: [],
-        aandachtspunten: [],
-        kopen: null,
-        eindadvies: '',
-      };
-    }
-
-    return Response.json(parsed);
-  } catch (e) {
-    return Response.json({ error: e.message }, { status: 500 });
-  }
+  return new Response(readable, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
 }
