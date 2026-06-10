@@ -51,7 +51,7 @@ Kadaster/BAG data:
 
   const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4000,
+    max_tokens: 8096,
     temperature: 0.3,
     messages: [{
       role: 'user',
