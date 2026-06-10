@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { Loader2, AlertTriangle, TrendingUp, Clock, ShieldAlert, CheckCircle2, XCircle, Trophy } from 'lucide-react';
+import { jsonrepair } from 'jsonrepair';
 import ProGate from '@/components/ProGate';
 import type { PropertyInput, KadasterInfo } from '@/lib/calc-types';
 
@@ -103,7 +104,7 @@ export default function AIAnalyseTab({ input, kad }: AIAnalyseTabProps) {
       }
 
       const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] ?? text;
-      const data = JSON.parse(jsonStr);
+      const data = JSON.parse(jsonrepair(jsonStr));
       if (data.error) throw new Error(data.error);
       setResult(data as AIResult);
     } catch (e: unknown) {
