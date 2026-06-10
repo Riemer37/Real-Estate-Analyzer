@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(request) {
   try {
@@ -52,8 +52,8 @@ Kadaster/BAG data:
 `;
 
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2500,
       temperature: 0.3,
       messages: [{
         role: 'user',
