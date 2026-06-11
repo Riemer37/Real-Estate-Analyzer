@@ -36,10 +36,12 @@ export default function HwmTab({ input }: HwmTabProps) {
     );
   }
 
-  const jaarhuur     = huidigeHuurprijs * 12;
+  const jaarhuur       = huidigeHuurprijs * 12;
+  const barRaw         = (jaarhuur / vraagprijs) * 100;
+  const onrealistisch  = barRaw > 20; // BAR >20% wijst op foutieve invoer
   const hwm          = vraagprijs / jaarhuur;
   const info         = hwmInfo(hwm);
-  const bar          = (jaarhuur / vraagprijs) * 100;
+  const bar          = barRaw;
   const vasteJaar    = (vasteLastenPerMaand ?? 0) * 12;
   const nar          = vasteJaar > 0 ? ((jaarhuur - vasteJaar) / vraagprijs) * 100 : null;
   const maxBod15     = jaarhuur * 15;
@@ -53,6 +55,17 @@ export default function HwmTab({ input }: HwmTabProps) {
 
   return (
     <div className="space-y-5">
+
+      {/* Waarschuwing bij onrealistische invoer */}
+      {onrealistisch && (
+        <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/8 px-4 py-3 text-sm text-warning">
+          <span className="shrink-0 font-bold mt-0.5">⚠</span>
+          <span>
+            De ingevoerde maandhuur van <strong>€ {huidigeHuurprijs.toLocaleString('nl-NL')}</strong> geeft een BAR van {bar.toFixed(0)}% — dat is onrealistisch hoog.
+            Controleer of je de maandhuur per maand hebt ingevuld (niet per jaar of totaal).
+          </span>
+        </div>
+      )}
 
       {/* HWM hoofdkaart */}
       <div className="panel p-5">
