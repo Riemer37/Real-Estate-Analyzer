@@ -63,7 +63,9 @@ export async function POST(request) {
     const nId    = res.nummeraanduiding_id;
     const epKey  = process.env.EP_ONLINE_API_KEY;
 
-    const [bagVbo, wozData, epData, koopData] = await Promise.all([
+    const rpKey = process.env.RUIMTELIJKE_PLANNEN_API_KEY;
+
+    const [bagVbo, wozData, epData, koopData, cbsData, rpData] = await Promise.all([
       // BAG VBO details
       bagId ? pFetch(
         `https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=2.0.0&request=GetFeature&typeName=bag:verblijfsobject&outputFormat=application/json&count=1&filter=` +
@@ -93,6 +95,27 @@ export async function POST(request) {
           4000
         );
       })() : Promise.resolve(null),
+
+      // CBS Wijken & Buurten — buurtgemiddelden (gratis, geen key)
+      res.lat && res.lon ? (() => {
+        const d = 0.008;
+        const bbox = `${res.lon - d},${res.lat - d},${res.lon + d},${res.lat + d}`;
+        return pFetch(
+          `https://api.pdok.nl/cbs/wijken-en-buurten-2024/ogc/v1/collections/buurten/items?f=json&bbox=${bbox}&limit=1`,
+          5000
+        );
+      })() : Promise.resolve(null),
+
+      // RuimtelijkePlannen — bestemmingsplan opvragen (gratis key vereist)
+      rpKey && res.lat && res.lon ? fetch(
+        'https://ruimte.omgevingswet.overheid.nl/ruimtelijke-plannen/api/opvragen/v4/plannen/_zoek?planType=bestemmingsplan&regelStatus=geldend',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': rpKey, 'Content-Crs': 'epsg:4258' },
+          body: JSON.stringify({ _geo: { intersectAndNotTouches: { type: 'Point', coordinates: [res.lon, res.lat] } } }),
+          signal: AbortSignal.timeout(6000),
+        }
+      ).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null),
     ]);
 
     // BAG VBO verwerken
@@ -165,6 +188,45 @@ export async function POST(request) {
       if (res.koopsommen.length > 0) {
         res.laatste_koopsom       = res.koopsommen[0].prijs;
         res.laatste_koopsom_datum = res.koopsommen[0].datum;
+        const gemPrijs = Math.round(res.koopsommen.reduce((s, k) => s + k.prijs, 0) / res.koopsommen.length);
+        res.gem_koopsom_buurt = gemPrijs;
+      }
+    }
+
+    // CBS Buurtstatistieken verwerken
+    const cbsFeat = cbsData?.features?.[0]?.properties ?? cbsData?.features?.[0] ?? null;
+    if (cbsFeat) {
+      const pos = (v) => (v != null && v > 0) ? v : null;
+      res.cbs_gem_woningwaarde = pos(cbsFeat.gemiddelde_woningwaarde);
+      res.cbs_pct_koop         = pos(cbsFeat.percentage_koopwoningen);
+      res.cbs_pct_huur         = pos(cbsFeat.percentage_huurwoningen);
+      res.cbs_gem_inkomen      = pos(cbsFeat.gemiddeld_inkomen_per_inwoner);
+      res.cbs_leegstand        = pos(cbsFeat.percentage_leegstand_woningen);
+      res.cbs_buurtnaam        = cbsFeat.buurtnaam ?? null;
+    }
+
+    // RuimtelijkePlannen verwerken
+    const plannen = rpData?.plannen ?? rpData?._embedded?.plannen ?? [];
+    if (plannen.length > 0 && rpKey) {
+      const plan = plannen[0];
+      res.rp_naam      = plan.naam ?? null;
+      res.rp_plan_datum = plan.planstatusInfo?.datum ?? null;
+      const planId = plan.id ?? plan.identificatie ?? null;
+      if (planId) {
+        const bvData = await fetch(
+          `https://ruimte.omgevingswet.overheid.nl/ruimtelijke-plannen/api/opvragen/v4/plannen/${encodeURIComponent(planId)}/bestemmingsvlakken/_zoek`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': rpKey, 'Content-Crs': 'epsg:4258' },
+            body: JSON.stringify({ _geo: { intersectAndNotTouches: { type: 'Point', coordinates: [res.lon, res.lat] } } }),
+            signal: AbortSignal.timeout(5000),
+          }
+        ).then(r => r.ok ? r.json() : null).catch(() => null);
+        const bvlakken = bvData?.bestemmingsvlakken ?? bvData?._embedded?.bestemmingsvlakken ?? [];
+        if (bvlakken.length > 0) {
+          res.rp_bestemming       = bvlakken[0].naam ?? null;
+          res.rp_hoofdgroep       = bvlakken[0].bestemmingshoofdgroep ?? null;
+        }
       }
     }
 

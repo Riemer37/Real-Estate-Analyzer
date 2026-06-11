@@ -48,4 +48,18 @@ export interface KadasterInfo {
   officielSqm?: number;
   lat?: number;
   lon?: number;
+  // CBS buurtstatistieken
+  cbsGemWoningWaarde?: number;
+  cbsPctKoop?: number;
+  cbsPctHuur?: number;
+  cbsGemInkomen?: number;
+  cbsLeegstand?: number;
+  // Koopsommen buurt
+  gemKoopsomBuurt?: number;
+  koopsomAantal?: number;
+  // RuimtelijkePlannen
+  rpNaam?: string;
+  rpPlanDatum?: string;
+  rpBestemming?: string;
+  rpHoofdgroep?: string;
 }

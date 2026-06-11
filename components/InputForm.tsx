@@ -99,6 +99,17 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
         officielSqm: data.official_sqm,
         lat: data.lat,
         lon: data.lon,
+        cbsGemWoningWaarde: data.cbs_gem_woningwaarde ?? undefined,
+        cbsPctKoop: data.cbs_pct_koop ?? undefined,
+        cbsPctHuur: data.cbs_pct_huur ?? undefined,
+        cbsGemInkomen: data.cbs_gem_inkomen ?? undefined,
+        cbsLeegstand: data.cbs_leegstand ?? undefined,
+        gemKoopsomBuurt: data.gem_koopsom_buurt ?? undefined,
+        koopsomAantal: data.koopsommen?.length ?? undefined,
+        rpNaam: data.rp_naam ?? undefined,
+        rpPlanDatum: data.rp_plan_datum ?? undefined,
+        rpBestemming: data.rp_bestemming ?? undefined,
+        rpHoofdgroep: data.rp_hoofdgroep ?? undefined,
       };
 
       setKad(kadInfo);

@@ -57,9 +57,20 @@ FINANCIËLE INVOER:
 - Aankoopkosten: OVB ${input.eigenGebruik ? '2%' : '10,4%'}, notaris €${input.notariskosten.toLocaleString('nl-NL')}, taxatie €${input.taxatiekosten.toLocaleString('nl-NL')}, keuring €${input.bouwkundigeKeuring.toLocaleString('nl-NL')}, overig €${input.overigeKosten.toLocaleString('nl-NL')}
 
 INVESTERINGSPROFIEL (gebruiker):
-- Bestemmingsplan: ${input.bestemmingsplan}
+- Bestemmingsplan (opgegeven): ${input.bestemmingsplan}
 - Verwachte huurprijs: ${input.verwachteHuurprijs ? '€' + input.verwachteHuurprijs.toLocaleString('nl-NL') + '/maand (= €' + (input.verwachteHuurprijs * 12).toLocaleString('nl-NL') + '/jaar)' : 'Niet opgegeven'}
 - Gewenst rendement: ${gewenstRendement}% per jaar
+
+OFFICIËLE MARKTDATA (externe bronnen):
+- CBS gem. woningwaarde buurt: ${kad.cbsGemWoningWaarde ? '€' + kad.cbsGemWoningWaarde.toLocaleString('nl-NL') : 'Niet beschikbaar'}
+- CBS % koopwoningen: ${kad.cbsPctKoop != null ? kad.cbsPctKoop + '%' : 'Niet beschikbaar'}
+- CBS % huurwoningen: ${kad.cbsPctHuur != null ? kad.cbsPctHuur + '%' : 'Niet beschikbaar'}
+- CBS gem. inkomen buurt: ${kad.cbsGemInkomen ? '€' + kad.cbsGemInkomen.toLocaleString('nl-NL') + '/jaar' : 'Niet beschikbaar'}
+- Recente verkooptransacties buurt: ${kad.koopsomAantal ? kad.koopsomAantal + ' transacties, gem. €' + kad.gemKoopsomBuurt?.toLocaleString('nl-NL') : 'Geen data'}
+- Officieel bestemmingsplan: ${kad.rpNaam ?? 'Niet opgezocht (API key ontbreekt)'}
+- Planstatus datum: ${kad.rpPlanDatum ?? '—'}
+- Bestemming perceel: ${kad.rpBestemming ?? '—'}
+- Bestemmingshoofdgroep: ${kad.rpHoofdgroep ?? '—'}
 `;
 
   const stream = client.messages.stream({
