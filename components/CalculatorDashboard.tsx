@@ -15,6 +15,7 @@ import BelastingTab from '@/components/calculators/BelastingTab';
 import AIAnalyseTab from '@/components/calculators/AIAnalyseTab';
 import HwmTab from '@/components/calculators/HwmTab';
 import MultiUnitTab from '@/components/calculators/MultiUnitTab';
+import VerbouwTab from '@/components/calculators/VerbouwTab';
 
 const FREE_SAVE_LIMIT = 5;
 
@@ -27,6 +28,7 @@ const BASE_TABS = [
   { id: 5, label: 'Verkoop' },
   { id: 6, label: 'Belasting' },
   { id: 7, label: 'AI Analyse' },
+  { id: 8, label: 'Verbouw' },
 ];
 
 function energielabelColor(label: EnergyLabel): string {
@@ -423,6 +425,7 @@ export default function CalculatorDashboard() {
             {activeTab === 5 && <VerkoopTab      input={result.input} kad={result.kad} />}
             {activeTab === 6 && <BelastingTab    input={result.input} kad={result.kad} />}
             {activeTab === 7 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
+            {activeTab === 8 && <VerbouwTab      input={result.input} />}
           </div>
         </>
       )}
