@@ -2,7 +2,22 @@ export type EnergyLabel = 'A+++'|'A++'|'A+'|'A'|'B'|'C'|'D'|'E'|'F'|'G'|'Onbeken
 export type WoningType = 'tussenwoning'|'hoekwoning'|'vrijstaand'|'appartement'|'bovenwoning'|'commercieel';
 export type Conditie = 'uitstekend'|'goed'|'redelijk'|'slecht'|'te_renoveren';
 export type Bestemmingsplan = 'wonen'|'gemengd'|'commercieel'|'bedrijf'|'agrarisch'|'onbekend';
-export type HuurcontractType = 'vrije_sector'|'sociaal'|'onbekend';
+export type HuurcontractType = 'vrije_sector'|'sociaal'|'bedrijfsruimte'|'onbekend';
+export type UnitGebruik = 'verhuurd'|'leeg'|'eigen_gebruik';
+
+export interface Unit {
+  id: string;
+  omschrijving: string;
+  oppervlakte: number;
+  gebruik: UnitGebruik;
+  maandhuur: number | null;
+  huurcontractType: HuurcontractType;
+  energielabel: EnergyLabel;
+  conditie: Conditie;
+  renovatiekostenPerM2: number | null;
+  leegwaarde: number | null;
+  vveKostenPerMaand: number | null;
+}
 
 export interface PropertyInput {
   adres: string;
@@ -31,6 +46,9 @@ export interface PropertyInput {
   huidigeHuurprijs: number | null;
   huurcontractType: HuurcontractType;
   vasteLastenPerMaand: number | null;
+  // Multi-unit
+  isMultiUnit: boolean;
+  units: Unit[];
 }
 
 export interface KadasterInfo {

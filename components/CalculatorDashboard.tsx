@@ -14,17 +14,19 @@ import VerkoopTab from '@/components/calculators/VerkoopTab';
 import BelastingTab from '@/components/calculators/BelastingTab';
 import AIAnalyseTab from '@/components/calculators/AIAnalyseTab';
 import HwmTab from '@/components/calculators/HwmTab';
+import MultiUnitTab from '@/components/calculators/MultiUnitTab';
 
 const FREE_SAVE_LIMIT = 5;
 
-const TABS = [
+const BASE_TABS = [
   { id: 0, label: 'Samenvatting' },
   { id: 1, label: 'Max Bod' },
   { id: 2, label: 'Verhuur' },
   { id: 3, label: 'HWM Analyse' },
-  { id: 4, label: 'Verkoop' },
-  { id: 5, label: 'Belasting' },
-  { id: 6, label: 'AI Analyse' },
+  { id: 4, label: 'Multi-Unit' },
+  { id: 5, label: 'Verkoop' },
+  { id: 6, label: 'Belasting' },
+  { id: 7, label: 'AI Analyse' },
 ];
 
 function energielabelColor(label: EnergyLabel): string {
@@ -392,9 +394,10 @@ export default function CalculatorDashboard() {
         <>
           <SummaryBar input={result.input} kad={result.kad} onReset={handleReset} />
 
+          {(() => { const TABS = result.input.isMultiUnit ? BASE_TABS : BASE_TABS.filter(t => t.id !== 4); return null; })()}
           <div className="px-6 border-b border-border bg-card">
             <div className="flex gap-1 overflow-x-auto">
-              {TABS.map(t => (
+              {(result.input.isMultiUnit ? BASE_TABS : BASE_TABS.filter(t => t.id !== 4)).map(t => (
                 <button
                   key={t.id}
                   type="button"
@@ -416,9 +419,10 @@ export default function CalculatorDashboard() {
             {activeTab === 1 && <MaxBodTab       input={result.input} kad={result.kad} />}
             {activeTab === 2 && <VerhuurTab      input={result.input} kad={result.kad} />}
             {activeTab === 3 && <HwmTab          input={result.input} />}
-            {activeTab === 4 && <VerkoopTab      input={result.input} kad={result.kad} />}
-            {activeTab === 5 && <BelastingTab    input={result.input} kad={result.kad} />}
-            {activeTab === 6 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
+            {activeTab === 4 && <MultiUnitTab    input={result.input} />}
+            {activeTab === 5 && <VerkoopTab      input={result.input} kad={result.kad} />}
+            {activeTab === 6 && <BelastingTab    input={result.input} kad={result.kad} />}
+            {activeTab === 7 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
           </div>
         </>
       )}

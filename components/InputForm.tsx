@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
-import type { PropertyInput, KadasterInfo, EnergyLabel, WoningType, Conditie, Bestemmingsplan, HuurcontractType } from '@/lib/calc-types';
+import type { PropertyInput, KadasterInfo, EnergyLabel, WoningType, Conditie, Bestemmingsplan, HuurcontractType, Unit, UnitGebruik } from '@/lib/calc-types';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 const INPUT_CLS = 'w-full bg-background border border-border rounded-md px-3 py-2 tabular text-sm';
@@ -33,6 +33,8 @@ const DEFAULT_INPUT: PropertyInput = {
   huidigeHuurprijs: null,
   huurcontractType: 'onbekend',
   vasteLastenPerMaand: null,
+  isMultiUnit: false,
+  units: [],
 };
 
 interface InputFormProps {
@@ -618,6 +620,123 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
         </div>
       </div>
 
+      {/* Section: Multi-unit */}
+      <div className="panel p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className={SECTION_HDR}>Multi-unit pand <span className="normal-case font-normal text-muted-foreground/70 ml-1">— optioneel</span></div>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !input.isMultiUnit;
+              set('isMultiUnit', next);
+              if (next && (!input.units || input.units.length === 0)) {
+                set('units', [makeUnit(1), makeUnit(2)]);
+              }
+            }}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              input.isMultiUnit ? 'bg-navy text-white' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+            }`}
+          >
+            {input.isMultiUnit ? 'Aan' : 'Uit'}
+          </button>
+        </div>
+
+        {input.isMultiUnit && (
+          <div className="space-y-3">
+            {(input.units ?? []).map((unit, idx) => (
+              <div key={unit.id} className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-muted-foreground">Unit {idx + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => set('units', input.units.filter(u => u.id !== unit.id))}
+                    className="text-xs text-destructive hover:underline"
+                  >Verwijderen</button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2 space-y-1">
+                    <label className={LABEL_CLS}>Omschrijving</label>
+                    <input type="text" value={unit.omschrijving}
+                      onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, omschrijving: e.target.value } : u))}
+                      className={INPUT_CLS} placeholder="bijv. Appartement BG links" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className={LABEL_CLS}>Oppervlakte (m²)</label>
+                    <input type="number" value={unit.oppervlakte || ''} min={0}
+                      onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, oppervlakte: parseNum(e.target.value) } : u))}
+                      className={INPUT_CLS} placeholder="85" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className={LABEL_CLS}>Gebruik</label>
+                    <select value={unit.gebruik}
+                      onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, gebruik: e.target.value as UnitGebruik } : u))}
+                      className={SELECT_CLS}>
+                      <option value="verhuurd">Verhuurd</option>
+                      <option value="leeg">Leeg</option>
+                      <option value="eigen_gebruik">Eigen gebruik</option>
+                    </select>
+                  </div>
+                  {unit.gebruik === 'verhuurd' && (<>
+                    <div className="space-y-1">
+                      <label className={LABEL_CLS}>Maandhuur (€)</label>
+                      <input type="number" value={unit.maandhuur ?? ''} min={0}
+                        onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, maandhuur: e.target.value === '' ? null : parseNum(e.target.value) } : u))}
+                        className={INPUT_CLS} placeholder="1200" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className={LABEL_CLS}>Huurcontract</label>
+                      <select value={unit.huurcontractType}
+                        onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, huurcontractType: e.target.value as HuurcontractType } : u))}
+                        className={SELECT_CLS}>
+                        <option value="onbekend">Onbekend</option>
+                        <option value="vrije_sector">Vrije sector</option>
+                        <option value="sociaal">Sociale huur</option>
+                        <option value="bedrijfsruimte">Bedrijfsruimte</option>
+                      </select>
+                    </div>
+                  </>)}
+                  <div className="space-y-1">
+                    <label className={LABEL_CLS}>Staat</label>
+                    <select value={unit.conditie}
+                      onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, conditie: e.target.value as Conditie } : u))}
+                      className={SELECT_CLS}>
+                      <option value="uitstekend">Uitstekend</option>
+                      <option value="goed">Goed</option>
+                      <option value="redelijk">Redelijk</option>
+                      <option value="slecht">Slecht</option>
+                      <option value="te_renoveren">Te renoveren</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className={LABEL_CLS}>Leegwaarde (€)</label>
+                    <input type="number" value={unit.leegwaarde ?? ''} min={0}
+                      onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, leegwaarde: e.target.value === '' ? null : parseNum(e.target.value) } : u))}
+                      className={INPUT_CLS} placeholder="Vrije verkoopwaarde" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className={LABEL_CLS}>VvE kosten (€/mnd)</label>
+                    <input type="number" value={unit.vveKostenPerMaand ?? ''} min={0}
+                      onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, vveKostenPerMaand: e.target.value === '' ? null : parseNum(e.target.value) } : u))}
+                      className={INPUT_CLS} placeholder="0 = geen VvE" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className={LABEL_CLS}>Renov.kosten (€/m²)</label>
+                    <input type="number" value={unit.renovatiekostenPerM2 ?? ''} min={0}
+                      onChange={e => set('units', input.units.map(u => u.id === unit.id ? { ...u, renovatiekostenPerM2: e.target.value === '' ? null : parseNum(e.target.value) } : u))}
+                      className={INPUT_CLS} placeholder="Leeg = geen renov." />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => set('units', [...(input.units ?? []), makeUnit((input.units?.length ?? 0) + 1)])}
+              className="w-full py-2 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+            >+ Unit toevoegen</button>
+          </div>
+        )}
+      </div>
+
       {/* Submit */}
       <button
         type="button"
@@ -629,4 +748,20 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
       </button>
     </div>
   );
+}
+
+function makeUnit(n: number): Unit {
+  return {
+    id: Math.random().toString(36).slice(2),
+    omschrijving: `Unit ${n}`,
+    oppervlakte: 0,
+    gebruik: 'leeg',
+    maandhuur: null,
+    huurcontractType: 'onbekend',
+    energielabel: 'Onbekend',
+    conditie: 'redelijk',
+    renovatiekostenPerM2: null,
+    leegwaarde: null,
+    vveKostenPerMaand: null,
+  };
 }
