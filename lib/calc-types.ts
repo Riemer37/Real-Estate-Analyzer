@@ -2,6 +2,7 @@ export type EnergyLabel = 'A+++'|'A++'|'A+'|'A'|'B'|'C'|'D'|'E'|'F'|'G'|'Onbeken
 export type WoningType = 'tussenwoning'|'hoekwoning'|'vrijstaand'|'appartement'|'bovenwoning'|'commercieel';
 export type Conditie = 'uitstekend'|'goed'|'redelijk'|'slecht'|'te_renoveren';
 export type Bestemmingsplan = 'wonen'|'gemengd'|'commercieel'|'bedrijf'|'agrarisch'|'onbekend';
+export type HuurcontractType = 'vrije_sector'|'sociaal'|'onbekend';
 
 export interface PropertyInput {
   adres: string;
@@ -26,6 +27,10 @@ export interface PropertyInput {
   // Investment profile — used for AI analysis
   bestemmingsplan: Bestemmingsplan;
   verwachteHuurprijs: number | null;
+  // Verhuurd pand analyse
+  huidigeHuurprijs: number | null;
+  huurcontractType: HuurcontractType;
+  vasteLastenPerMaand: number | null;
 }
 
 export interface KadasterInfo {

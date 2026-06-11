@@ -13,6 +13,7 @@ import VerhuurTab from '@/components/calculators/VerhuurTab';
 import VerkoopTab from '@/components/calculators/VerkoopTab';
 import BelastingTab from '@/components/calculators/BelastingTab';
 import AIAnalyseTab from '@/components/calculators/AIAnalyseTab';
+import HwmTab from '@/components/calculators/HwmTab';
 
 const FREE_SAVE_LIMIT = 5;
 
@@ -20,9 +21,10 @@ const TABS = [
   { id: 0, label: 'Samenvatting' },
   { id: 1, label: 'Max Bod' },
   { id: 2, label: 'Verhuur' },
-  { id: 3, label: 'Verkoop' },
-  { id: 4, label: 'Belasting' },
-  { id: 5, label: 'AI Analyse' },
+  { id: 3, label: 'HWM Analyse' },
+  { id: 4, label: 'Verkoop' },
+  { id: 5, label: 'Belasting' },
+  { id: 6, label: 'AI Analyse' },
 ];
 
 function energielabelColor(label: EnergyLabel): string {
@@ -413,9 +415,10 @@ export default function CalculatorDashboard() {
             {activeTab === 0 && <SamenvattingTab input={result.input} kad={result.kad} />}
             {activeTab === 1 && <MaxBodTab       input={result.input} kad={result.kad} />}
             {activeTab === 2 && <VerhuurTab      input={result.input} kad={result.kad} />}
-            {activeTab === 3 && <VerkoopTab      input={result.input} kad={result.kad} />}
-            {activeTab === 4 && <BelastingTab    input={result.input} kad={result.kad} />}
-            {activeTab === 5 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
+            {activeTab === 3 && <HwmTab          input={result.input} />}
+            {activeTab === 4 && <VerkoopTab      input={result.input} kad={result.kad} />}
+            {activeTab === 5 && <BelastingTab    input={result.input} kad={result.kad} />}
+            {activeTab === 6 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
           </div>
         </>
       )}

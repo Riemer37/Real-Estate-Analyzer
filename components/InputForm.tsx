@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
-import type { PropertyInput, KadasterInfo, EnergyLabel, WoningType, Conditie, Bestemmingsplan } from '@/lib/calc-types';
+import type { PropertyInput, KadasterInfo, EnergyLabel, WoningType, Conditie, Bestemmingsplan, HuurcontractType } from '@/lib/calc-types';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 const INPUT_CLS = 'w-full bg-background border border-border rounded-md px-3 py-2 tabular text-sm';
@@ -30,6 +30,9 @@ const DEFAULT_INPUT: PropertyInput = {
   referentieprijsPerM2: null,
   bestemmingsplan: 'onbekend',
   verwachteHuurprijs: null,
+  huidigeHuurprijs: null,
+  huurcontractType: 'onbekend',
+  vasteLastenPerMaand: null,
 };
 
 interface InputFormProps {
@@ -567,6 +570,51 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
             />
           </div>
 
+        </div>
+      </div>
+
+      {/* Section: Verhuurd pand */}
+      <div className="panel p-5 space-y-4">
+        <div className={SECTION_HDR}>Verhuurd pand <span className="normal-case font-normal text-muted-foreground/70 ml-1">— optioneel, voor HWM analyse</span></div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Huidige maandhuur (€)</label>
+            <input
+              type="number"
+              value={input.huidigeHuurprijs === null ? '' : input.huidigeHuurprijs}
+              onChange={e => set('huidigeHuurprijs', e.target.value === '' ? null : parseNum(e.target.value))}
+              placeholder="bijv. 1500"
+              min={0}
+              className={INPUT_CLS}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Huurcontract type</label>
+            <select
+              value={input.huurcontractType}
+              onChange={e => set('huurcontractType', e.target.value as HuurcontractType)}
+              className={SELECT_CLS}
+            >
+              <option value="onbekend">Onbekend</option>
+              <option value="vrije_sector">Vrije sector</option>
+              <option value="sociaal">Sociale huur</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={LABEL_CLS}>Vaste lasten (€/maand)</label>
+            <input
+              type="number"
+              value={input.vasteLastenPerMaand === null ? '' : input.vasteLastenPerMaand}
+              onChange={e => set('vasteLastenPerMaand', e.target.value === '' ? null : parseNum(e.target.value))}
+              placeholder="OZB + verzekering + beheer"
+              min={0}
+              className={INPUT_CLS}
+            />
+            <p className="text-[11px] text-muted-foreground">Voor NAR berekening</p>
+          </div>
         </div>
       </div>
 
