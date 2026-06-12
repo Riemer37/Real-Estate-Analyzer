@@ -115,6 +115,8 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
         rpPlanDatum: data.rp_plan_datum ?? undefined,
         rpBestemming: data.rp_bestemming ?? undefined,
         rpHoofdgroep: data.rp_hoofdgroep ?? undefined,
+        rpId: data.rp_id ?? undefined,
+        rpViewerUrl: data.rp_viewer_url ?? undefined,
       };
 
       setKad(kadInfo);
