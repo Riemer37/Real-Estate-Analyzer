@@ -282,19 +282,20 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                     <tr>
                       <td className="py-1.5 pr-3 text-muted-foreground">Bestemmingsplan</td>
                       <td className="py-1.5 font-medium">
-                        {kad.rpViewerUrl ? (
-                          <a
-                            href={kad.rpViewerUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-navy hover:underline"
-                            title="Open volledige planregels op ruimtelijkeplannen.nl"
-                          >
-                            {kad.rpNaam} ↗
-                          </a>
-                        ) : (
-                          kad.rpNaam
-                        )}
+                        <a
+                          href={
+                            kad.rpViewerUrl ??
+                            (kad.lon && kad.lat
+                              ? `https://www.ruimtelijkeplannen.nl/viewer/viewer?center=${kad.lon},${kad.lat}&zoomlevel=6`
+                              : 'https://www.ruimtelijkeplannen.nl/viewer/viewer')
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-navy hover:underline"
+                          title="Open volledige planregels op ruimtelijkeplannen.nl"
+                        >
+                          {kad.rpNaam} ↗
+                        </a>
                       </td>
                     </tr>
                   )}
