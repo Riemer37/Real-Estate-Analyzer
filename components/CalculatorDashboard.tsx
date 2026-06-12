@@ -267,6 +267,10 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                     { k: 'Officieel opp.',   v: kad.officielSqm !== undefined ? `${kad.officielSqm} m²` : '—' },
                     { k: 'Perceeloppervlak', v: kad.perceelOppervlakte !== undefined ? `${kad.perceelOppervlakte} m²` : '—' },
                     { k: 'EP-label',         v: kad.energielabelEP ?? '—' },
+                    { k: 'Bestemmingsplan',  v: kad.rpNaam ?? '—' },
+                    { k: 'Bestemming',       v: kad.rpBestemming ?? '—' },
+                    { k: 'Hoofdgroep',       v: kad.rpHoofdgroep ?? '—' },
+                    { k: 'Plandatum',        v: kad.rpPlanDatum ?? '—' },
                   ].map(row => (
                     <tr key={row.k}>
                       <td className="py-1.5 pr-3 text-muted-foreground">{row.k}</td>
