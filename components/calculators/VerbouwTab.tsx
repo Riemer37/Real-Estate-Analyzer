@@ -552,7 +552,8 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
         throw new Error(err.error ?? `HTTP ${res.status}`);
       }
 
-      const reader  = res.body!.getReader();
+      if (!res.body) throw new Error('Geen response body ontvangen');
+      const reader  = res.body.getReader();
       const decoder = new TextDecoder();
       let text = '';
       while (true) {
@@ -560,8 +561,10 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
         if (done) break;
         text += decoder.decode(value, { stream: true });
       }
+      if (!text.trim()) throw new Error('Lege response ontvangen van de AI');
       const json = text.match(/\{[\s\S]*\}/)?.[0] ?? text;
       const data: RenovatieRaming = JSON.parse(jsonrepair(json));
+      if (!data.raming) throw new Error('AI gaf geen geldige raming terug — probeer opnieuw');
       setRaming(data);
       setStep(3);
     } catch (e: unknown) {
@@ -758,9 +761,9 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-4">Totale verbouwraming</div>
             <div className="grid grid-cols-3 gap-4 mb-5">
               {[
-                { label: 'Laag scenario',   value: raming.raming.laag,   color: 'text-positive' },
-                { label: 'Midden scenario', value: raming.raming.midden, color: 'text-navy' },
-                { label: 'Hoog scenario',   value: raming.raming.hoog,   color: 'text-warning' },
+                { label: 'Laag scenario',   value: raming.raming?.laag   ?? 0, color: 'text-positive' },
+                { label: 'Midden scenario', value: raming.raming?.midden ?? 0, color: 'text-navy' },
+                { label: 'Hoog scenario',   value: raming.raming?.hoog   ?? 0, color: 'text-warning' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="text-center">
                   <div className={`text-2xl font-extrabold tabular ${color}`}>{fmt(value)}</div>
@@ -771,19 +774,19 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-border pt-4 text-sm">
               <div>
                 <span className="text-muted-foreground text-xs">Per m²</span>
-                <div className="font-semibold tabular">€ {raming.raming.perM2.toLocaleString('nl-NL')}</div>
+                <div className="font-semibold tabular">€ {(raming.raming?.perM2 ?? 0).toLocaleString('nl-NL')}</div>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">Doorlooptijd</span>
-                <div className="font-semibold">{raming.raming.doorlooptijd}</div>
+                <div className="font-semibold">{raming.raming?.doorlooptijd ?? '—'}</div>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">Onvoorzien</span>
-                <div className="font-semibold tabular">{fmt(raming.raming.onvoorzien)}</div>
+                <div className="font-semibold tabular">{fmt(raming.raming?.onvoorzien ?? 0)}</div>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">Vergunningen</span>
-                <div className="font-semibold tabular">{fmt(raming.raming.vergunningen)}</div>
+                <div className="font-semibold tabular">{fmt(raming.raming?.vergunningen ?? 0)}</div>
               </div>
             </div>
           </div>
@@ -823,28 +826,29 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
           <div>
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-3">Investeringsscenario's na verbouw</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {([
+              {[
                 { letter: 'A', data: raming.scenarioA },
                 { letter: 'B', data: raming.scenarioB },
                 { letter: 'C', data: raming.scenarioC },
                 { letter: 'D', data: raming.scenarioD },
-              ] as const).map(({ letter, data }) => (
+              ].filter(s => s.data != null).map(({ letter, data }) => (
                 <ScenarioCard
                   key={letter}
                   letter={letter}
                   scenario={data}
-                  isAanbevolen={raming.eindadvies.aanbevolenScenario === letter}
+                  isAanbevolen={raming.eindadvies?.aanbevolenScenario === letter}
                 />
               ))}
             </div>
           </div>
 
           {/* Eindadvies */}
+          {raming.eindadvies && (
           <div className="panel p-5 border-l-4 border-l-navy">
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-3">Eindadvies</div>
             <div className="flex items-start gap-3 mb-4">
               <div className="size-8 rounded-full bg-navy text-white text-sm font-bold flex items-center justify-center shrink-0">
-                {raming.eindadvies.aanbevolenScenario}
+                {raming.eindadvies.aanbevolenScenario ?? '—'}
               </div>
               <p className="text-sm text-foreground leading-relaxed">{raming.eindadvies.reden}</p>
             </div>
@@ -852,7 +856,7 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
               <div>
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Risico's</div>
                 <ul className="space-y-1">
-                  {raming.eindadvies.risicos.map((r, i) => (
+                  {(raming.eindadvies.risicos ?? []).map((r, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <AlertTriangle className="size-3.5 text-warning shrink-0 mt-0.5" />
                       <span>{r}</span>
@@ -863,7 +867,7 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
               <div>
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Volgende stappen</div>
                 <ol className="space-y-1">
-                  {raming.eindadvies.volgendeStappen.map((s, i) => (
+                  {(raming.eindadvies.volgendeStappen ?? []).map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <span className="size-4 rounded-full bg-navy/10 text-navy text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                         {i + 1}
@@ -875,6 +879,7 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
               </div>
             </div>
           </div>
+          )}
         </div>
       )}
     </div>
