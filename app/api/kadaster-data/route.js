@@ -213,6 +213,8 @@ export async function POST(request) {
       res.rp_plan_datum = plan.planstatusInfo?.datum ?? null;
       const planId = plan.id ?? plan.identificatie ?? null;
       if (planId) {
+        res.rp_id         = planId;
+        res.rp_viewer_url = `https://www.ruimtelijkeplannen.nl/viewer/viewer?planidn=${encodeURIComponent(planId)}`;
         const bvData = await fetch(
           `https://ruimte.omgevingswet.overheid.nl/ruimtelijke-plannen/api/opvragen/v4/plannen/${encodeURIComponent(planId)}/bestemmingsvlakken/_zoek`,
           {

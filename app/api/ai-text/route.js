@@ -71,6 +71,7 @@ OFFICIËLE MARKTDATA (externe bronnen):
 - Planstatus datum: ${kad.rpPlanDatum ?? '—'}
 - Bestemming perceel: ${kad.rpBestemming ?? '—'}
 - Bestemmingshoofdgroep: ${kad.rpHoofdgroep ?? '—'}
+${kad.rpHoofdgroep ? `- Interpretatie bestemmingshoofdgroep: Leg in je analyse uit welke functies er op basis van hoofdgroep "${kad.rpHoofdgroep}" doorgaans zijn toegestaan (bijv. wonen, kantoor, horeca, detailhandel, zorg, etc.), en welke kansen of beperkingen dit biedt voor de investeerder. Geef aan dat de exacte regels in de planregels staan.` : ''}
 `;
 
   const stream = client.messages.stream({

@@ -85,4 +85,6 @@ export interface KadasterInfo {
   rpPlanDatum?: string;
   rpBestemming?: string;
   rpHoofdgroep?: string;
+  rpId?: string;
+  rpViewerUrl?: string;
 }

@@ -267,7 +267,6 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                     { k: 'Officieel opp.',   v: kad.officielSqm !== undefined ? `${kad.officielSqm} m²` : '—' },
                     { k: 'Perceeloppervlak', v: kad.perceelOppervlakte !== undefined ? `${kad.perceelOppervlakte} m²` : '—' },
                     { k: 'EP-label',         v: kad.energielabelEP ?? '—' },
-                    { k: 'Bestemmingsplan',  v: kad.rpNaam ?? '—' },
                     { k: 'Bestemming',       v: kad.rpBestemming ?? '—' },
                     { k: 'Hoofdgroep',       v: kad.rpHoofdgroep ?? '—' },
                     { k: 'Plandatum',        v: kad.rpPlanDatum ?? '—' },
@@ -277,6 +276,26 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                       <td className="py-1.5 font-medium">{row.v}</td>
                     </tr>
                   ))}
+                  {kad.rpNaam && (
+                    <tr>
+                      <td className="py-1.5 pr-3 text-muted-foreground">Bestemmingsplan</td>
+                      <td className="py-1.5 font-medium">
+                        {kad.rpViewerUrl ? (
+                          <a
+                            href={kad.rpViewerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-navy hover:underline"
+                            title="Open volledige planregels op ruimtelijkeplannen.nl"
+                          >
+                            {kad.rpNaam} ↗
+                          </a>
+                        ) : (
+                          kad.rpNaam
+                        )}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
               <p className="text-[11px] text-muted-foreground/60 italic mt-2">
