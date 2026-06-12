@@ -339,6 +339,22 @@ function PandPuntenCard({
   );
 }
 
+function safeNum(v: unknown): number | null {
+  if (v == null) return null;
+  const n = typeof v === 'string' ? parseFloat(v.replace(/[^0-9.,-]/g, '').replace(',', '.')) : Number(v);
+  return isFinite(n) ? n : null;
+}
+
+function safePct(v: unknown): string {
+  const n = safeNum(v);
+  return n !== null ? n.toFixed(1) + '%' : '—';
+}
+
+function safeMult(v: unknown): string {
+  const n = safeNum(v);
+  return n !== null ? n.toFixed(1) + '×' : '—';
+}
+
 function ScenarioCard({
   letter,
   scenario,
@@ -348,6 +364,11 @@ function ScenarioCard({
   scenario: Scenario;
   isAanbevolen: boolean;
 }) {
+  if (!scenario) return null;
+
+  const nettoWinst    = safeNum(scenario.nettoWinst);
+  const cashflow      = safeNum(scenario.cashflowPerMaand);
+
   return (
     <div className={`panel p-5 relative ${isAanbevolen ? 'ring-2 ring-positive' : ''}`}>
       {isAanbevolen && (
@@ -359,83 +380,83 @@ function ScenarioCard({
       )}
       <div className="flex items-center gap-2 mb-3">
         <span className="size-7 rounded-full bg-navy/10 text-navy text-sm font-bold flex items-center justify-center">{letter}</span>
-        <span className="font-semibold text-sm text-foreground">{scenario.naam}</span>
+        <span className="font-semibold text-sm text-foreground">{scenario.naam ?? '—'}</span>
       </div>
       <div className="space-y-1.5 text-sm">
-        {scenario.verwachteOpbrengst !== undefined && (
+        {scenario.verwachteOpbrengst != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Verwachte opbrengst</span>
-            <span className="font-semibold tabular">{fmt(scenario.verwachteOpbrengst)}</span>
+            <span className="font-semibold tabular">{fmt(safeNum(scenario.verwachteOpbrengst) ?? 0)}</span>
           </div>
         )}
-        {scenario.investering !== undefined && (
+        {scenario.investering != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Investering</span>
-            <span className="font-semibold tabular text-warning">{fmt(scenario.investering)}</span>
+            <span className="font-semibold tabular text-warning">{fmt(safeNum(scenario.investering) ?? 0)}</span>
           </div>
         )}
-        {scenario.nettoWinst !== undefined && (
+        {nettoWinst !== null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Netto winst</span>
-            <span className={`font-semibold tabular ${scenario.nettoWinst >= 0 ? 'text-positive' : 'text-destructive'}`}>
-              {fmt(scenario.nettoWinst)}
+            <span className={`font-semibold tabular ${nettoWinst >= 0 ? 'text-positive' : 'text-destructive'}`}>
+              {fmt(nettoWinst)}
             </span>
           </div>
         )}
-        {scenario.roi !== undefined && (
+        {scenario.roi != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">ROI</span>
-            <span className="font-semibold tabular">{scenario.roi.toFixed(1)}%</span>
+            <span className="font-semibold tabular">{safePct(scenario.roi)}</span>
           </div>
         )}
-        {scenario.doorlooptijd !== undefined && (
+        {scenario.doorlooptijd != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Doorlooptijd</span>
             <span className="font-medium">{scenario.doorlooptijd}</span>
           </div>
         )}
-        {scenario.markthuurPerMaand !== undefined && (
+        {scenario.markthuurPerMaand != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Markthuur/mnd</span>
-            <span className="font-semibold tabular">{fmt(scenario.markthuurPerMaand)}</span>
+            <span className="font-semibold tabular">{fmt(safeNum(scenario.markthuurPerMaand) ?? 0)}</span>
           </div>
         )}
-        {scenario.cashflowPerMaand !== undefined && (
+        {cashflow !== null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Cashflow/mnd</span>
-            <span className={`font-semibold tabular ${scenario.cashflowPerMaand >= 0 ? 'text-positive' : 'text-destructive'}`}>
-              {fmt(scenario.cashflowPerMaand)}
+            <span className={`font-semibold tabular ${cashflow >= 0 ? 'text-positive' : 'text-destructive'}`}>
+              {fmt(cashflow)}
             </span>
           </div>
         )}
-        {scenario.bar !== undefined && (
+        {scenario.bar != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">BAR / NAR</span>
-            <span className="font-semibold tabular">{scenario.bar.toFixed(1)}% / {scenario.nar?.toFixed(1)}%</span>
+            <span className="font-semibold tabular">{safePct(scenario.bar)} / {safePct(scenario.nar)}</span>
           </div>
         )}
-        {scenario.hwm !== undefined && (
+        {scenario.hwm != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">HWM</span>
-            <span className="font-semibold tabular">{scenario.hwm.toFixed(1)}×</span>
+            <span className="font-semibold tabular">{safeMult(scenario.hwm)}</span>
           </div>
         )}
-        {scenario.terugverdientijd !== undefined && (
+        {scenario.terugverdientijd != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Terugverdientijd</span>
             <span className="font-medium">{scenario.terugverdientijd}</span>
           </div>
         )}
-        {scenario.brutoJaaropbrengst !== undefined && (
+        {scenario.brutoJaaropbrengst != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Bruto jaaropbrengst</span>
-            <span className="font-semibold tabular">{fmt(scenario.brutoJaaropbrengst)}</span>
+            <span className="font-semibold tabular">{fmt(safeNum(scenario.brutoJaaropbrengst) ?? 0)}</span>
           </div>
         )}
-        {scenario.bezettingsgraad !== undefined && (
+        {scenario.bezettingsgraad != null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Bezettingsgraad</span>
-            <span className="font-medium">{scenario.bezettingsgraad}%</span>
+            <span className="font-medium">{safeNum(scenario.bezettingsgraad) ?? '—'}%</span>
           </div>
         )}
       </div>
