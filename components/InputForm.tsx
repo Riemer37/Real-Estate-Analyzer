@@ -483,6 +483,7 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
               <option value="appartement">Appartement</option>
               <option value="bovenwoning">Bovenwoning</option>
               <option value="commercieel">Commercieel</option>
+              <option value="zorg">Zorgpand</option>
             </select>
           </div>
 

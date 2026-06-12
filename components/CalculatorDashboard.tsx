@@ -259,7 +259,7 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                     { k: 'Gemeente',         v: kad.gemeente ?? '—' },
                     { k: 'Buurt',            v: kad.buurt ?? '—' },
                     { k: 'BAG-id',           v: kad.bagId ?? '—' },
-                    { k: 'Gebruiksdoel',     v: kad.gebruiksdoel ?? '—' },
+                    { k: 'Gebruiksdoel (BAG)', v: kad.gebruiksdoel ?? '—' },
                     { k: 'Status',           v: kad.status ?? '—' },
                     { k: 'Rijksmonument',    v: kad.isRijksmonument ? 'Ja' : 'Nee' },
                     { k: 'Beschermd gezicht',v: kad.beschermdGezicht ?? 'Nee' },
@@ -279,6 +279,9 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
                   ))}
                 </tbody>
               </table>
+              <p className="text-[11px] text-muted-foreground/60 italic mt-2">
+                Gebruiksdoel (BAG) is de officieel geregistreerde functie. Een pand kan meerdere functies hebben en de registratie kan afwijken van het huidige gebruik.
+              </p>
               {kad.wozHistory.length > 0 && (
                 <div className="border-t border-border pt-3">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">WOZ-geschiedenis</div>

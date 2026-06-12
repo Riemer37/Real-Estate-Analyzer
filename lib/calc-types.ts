@@ -1,5 +1,5 @@
 export type EnergyLabel = 'A+++'|'A++'|'A+'|'A'|'B'|'C'|'D'|'E'|'F'|'G'|'Onbekend';
-export type WoningType = 'tussenwoning'|'hoekwoning'|'vrijstaand'|'appartement'|'bovenwoning'|'commercieel';
+export type WoningType = 'tussenwoning'|'hoekwoning'|'vrijstaand'|'appartement'|'bovenwoning'|'commercieel'|'zorg';
 export type Conditie = 'uitstekend'|'goed'|'redelijk'|'slecht'|'te_renoveren';
 export type Bestemmingsplan = 'wonen'|'gemengd'|'commercieel'|'bedrijf'|'agrarisch'|'onbekend';
 export type HuurcontractType = 'vrije_sector'|'sociaal'|'bedrijfsruimte'|'onbekend';
