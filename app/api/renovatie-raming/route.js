@@ -16,25 +16,71 @@ export async function POST(request) {
   const { kamers, pandPunten, property } = await request.json();
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const prompt = `Je bent een senior bouwkostendeskundige voor de Nederlandse markt (2024-normen).
+  // Pre-bereken financiële parameters zodat Claude niet hoeft te rekenen
+  const vraagprijs = property.vraagprijs ?? 0;
+  const oppervlakte = property.woonoppervlakte ?? 0;
+  const ovbPct = property.eigenGebruik ? 2 : 10.4;
+  const ovbBedrag = Math.round(vraagprijs * (ovbPct / 100));
+  const notaris = property.notariskosten ?? 2500;
+  const taxatie = property.taxatiekosten ?? 750;
+  const keuring = property.bouwkundigeKeuring ?? 600;
+  const bijkomend = ovbBedrag + notaris + taxatie + keuring;
+  const arvPerM2 = property.referentieprijsPerM2 ?? null;
+  const arvTotaal = arvPerM2 ? Math.round(arvPerM2 * oppervlakte) : null;
+
+  // Actieve werkzaamheden tellen
+  const actieveKamers = kamers.filter(k =>
+    Object.entries(k.acties ?? {}).some(([, v]) => v && v !== false && v !== '' && v !== 0)
+  );
+
+  const systemPrompt = `Je bent een senior bouwkostendeskundige voor de Nederlandse markt (2024-normen).
+
+REKENREGELS:
+- Gebruik UITSLUITEND de verstrekte gegevens — verzin NOOIT bedragen
+- Geef bandbreedtes (laag/midden/hoog) op basis van complexiteit en materiaalkosten NL 2024
+- Typische NL tarieven: keuken €8.000–€25.000, badkamer €6.000–€18.000, vloer €30–€80/m², schilderwerk €8–€20/m²
+- Onvoorzien: standaard 10-15% van totale verbouwkosten
+- Vergunningskosten: alleen rekenen als verbouwing vergunningplichtig is (bijv. dragende wand, dakopbouw)
+- ROI = (ARV − totale investering) / totale investering × 100
+- BAR = (jaarhuur / aankoopprijs) × 100
+- HWM = aankoopprijs / jaarhuur
+
+BETROUWBAARHEIDSREGELS:
+- Als een ARV ontbreekt: vermeld dit expliciet en geef GEEN concrete ROI
+- Geef altijd een toelichting bij onzekere schattingen
+- Antwoord ALLEEN in geldig JSON (geen markdown, geen tekst buiten de JSON)`;
+
+  const werkzaamheden = kamers.map(k => {
+    const actief = Object.entries(k.acties ?? {}).filter(([, v]) => v && v !== false && v !== '' && v !== 0);
+    if (actief.length === 0) return null;
+    return `${k.naam} (${k.oppervlakte ?? '?'}m², staat: ${k.staat}):
+  Gewenst gebruik: ${k.gewenstGebruik || 'ongewijzigd'}
+  ${actief.map(([a, v]) => `  • ${a}: ${v}`).join('\n')}`;
+  }).filter(Boolean).join('\n\n');
+
+  const pandwerk = Object.entries(pandPunten ?? {})
+    .filter(([, v]) => v && v !== 'geen' && v !== 'handhaven' && v !== 'niet_aanwezig' && v !== 'aanwezig')
+    .map(([k, v]) => `- ${k}: ${v}`)
+    .join('\n');
+
+  const prompt = `Maak een gedetailleerde verbouwraming voor dit pand.
 
 PAND:
 - Adres: ${property.adres}
 - Type: ${property.typeWoning}
-- Vraagprijs: €${property.vraagprijs?.toLocaleString('nl-NL')}
-- Oppervlakte: ${property.woonoppervlakte}m²
+- Vraagprijs: €${vraagprijs.toLocaleString('nl-NL')}
+- Oppervlakte: ${oppervlakte}m²
+- OVB (${ovbPct}%): €${ovbBedrag.toLocaleString('nl-NL')}
+- Bijkomende kosten totaal: €${bijkomend.toLocaleString('nl-NL')}
+- ARV (After Repair Value): ${arvTotaal ? '€' + arvTotaal.toLocaleString('nl-NL') + ' (€' + arvPerM2 + '/m²)' : 'NIET OPGEGEVEN — geef geen concrete ROI'}
 
-VERBOUWCHECKLIST PER RUIMTE:
-${kamers.map(k => `
-${k.naam} (${k.oppervlakte ?? '?'}m², staat: ${k.staat}):
-- Gewenste functie: ${k.gewenstGebruik || 'ongewijzigd'}
-${Object.entries(k.acties).filter(([,v]) => v && v !== false && v !== '' && v !== 0).map(([k2,v]) => `  • ${k2}: ${v}`).join('\n')}
-`).join('')}
+VERBOUWWERKZAAMHEDEN PER RUIMTE:
+${werkzaamheden || '(Geen specifieke ruimtes geselecteerd)'}
 
-PAND-NIVEAU:
-${Object.entries(pandPunten).filter(([,v]) => v && v !== 'geen' && v !== 'handhaven' && v !== 'niet_aanwezig' && v !== 'aanwezig').map(([k,v]) => `- ${k}: ${v}`).join('\n')}
+PAND-NIVEAU WERKZAAMHEDEN:
+${pandwerk || '(Geen pand-niveau werkzaamheden)'}
 
-Geef ALLEEN geldige JSON terug (geen markdown):
+Geef ALLEEN geldige JSON terug:
 {
   "raming": {
     "laag": 45000,
@@ -50,10 +96,10 @@ Geef ALLEEN geldige JSON terug (geen markdown):
   },
   "scenarioA": {
     "naam": "Verkopen na verbouw",
-    "verwachteOpbrengst": 550000,
+    "verwachteOpbrengst": ${arvTotaal ?? 0},
     "investering": 65000,
     "nettoWinst": 40000,
-    "roi": 14.5,
+    "roi": ${arvTotaal ? 'BEREKEN_OP_BASIS_VAN_DATA' : null},
     "doorlooptijd": "6-9 maanden",
     "toelichting": "..."
   },
@@ -88,12 +134,15 @@ Geef ALLEEN geldige JSON terug (geen markdown):
     "risicos": ["risico 1", "risico 2", "risico 3"],
     "volgendeStappen": ["stap 1", "stap 2", "stap 3"]
   }
-}`;
+}
+
+Verplicht: alle getallen als number (niet als string). roi als number of null als ARV ontbreekt.`;
 
   const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
     max_tokens: 8096,
-    temperature: 0.2,
+    temperature: 0.1,
+    system: systemPrompt,
     messages: [{ role: 'user', content: prompt }],
   });
 

@@ -18,6 +18,7 @@ import MultiUnitTab from '@/components/calculators/MultiUnitTab';
 import VerbouwTab from '@/components/calculators/VerbouwTab';
 import AanhoudenTab from '@/components/calculators/AanhoudenTab';
 import HypotheekTab from '@/components/calculators/HypotheekTab';
+import MarktTab from '@/components/calculators/MarktTab';
 
 const FREE_SAVE_LIMIT = 5;
 
@@ -33,6 +34,7 @@ const BASE_TABS = [
   { id: 8, label: 'Verbouw' },
   { id: 9, label: 'Aanhouden' },
   { id: 10, label: 'Hypotheek' },
+  { id: 11, label: 'Markt' },
 ];
 
 function energielabelColor(label: EnergyLabel): string {
@@ -189,8 +191,54 @@ function SummaryBar({ input, kad, onReset }: { input: PropertyInput; kad: Kadast
   );
 }
 
+// ── Risicoscore ────────────────────────────────────────────────────────────────
+function berekenRisico(input: PropertyInput, kad: KadasterInfo): {
+  score: number;
+  niveau: 'laag' | 'middel' | 'hoog';
+  factoren: { label: string; punten: number; toelichting: string }[];
+} {
+  const factoren: { label: string; punten: number; toelichting: string }[] = [];
+
+  // WOZ verhouding
+  if (input.wozWaarde > 0) {
+    const wozRatio = input.vraagprijs / input.wozWaarde;
+    if (wozRatio > 1.30)      factoren.push({ label: 'Vraagprijs sterk boven WOZ', punten: 20, toelichting: `${((wozRatio - 1) * 100).toFixed(0)}% boven WOZ` });
+    else if (wozRatio > 1.15) factoren.push({ label: 'Vraagprijs boven WOZ', punten: 10, toelichting: `${((wozRatio - 1) * 100).toFixed(0)}% boven WOZ` });
+  }
+
+  // Energielabel
+  if (['G', 'F'].includes(input.energielabel)) factoren.push({ label: 'Laag energielabel', punten: 15, toelichting: `Label ${input.energielabel} — hoge renovatiekosten verwacht` });
+  else if (input.energielabel === 'E')          factoren.push({ label: 'Laag energielabel', punten: 8, toelichting: `Label ${input.energielabel} — verduurzaming nodig` });
+
+  // Conditie
+  if (input.conditie === 'slecht')             factoren.push({ label: 'Slechte staat', punten: 20, toelichting: 'Hoge onvoorziene kosten mogelijk' });
+  else if (input.conditie === 'te_renoveren')  factoren.push({ label: 'Te renoveren', punten: 10, toelichting: 'Significante verbouwing verwacht' });
+
+  // Erfpacht
+  if (input.erfpacht)                          factoren.push({ label: 'Erfpacht', punten: 12, toelichting: 'Canonherziening mogelijk — check voorwaarden' });
+
+  // Rijksmonument
+  if (kad.isRijksmonument)                     factoren.push({ label: 'Rijksmonument', punten: 20, toelichting: 'Verbouwing beperkt en vergunningplichtig' });
+
+  // Beschermd stadsgezicht
+  if (kad.beschermdGezicht)                    factoren.push({ label: 'Beschermd gezicht', punten: 8, toelichting: 'Exterieurwijzigingen beperkt' });
+
+  // Buurt koopsom
+  if (kad.gemKoopsomBuurt && input.woonoppervlakte > 0) {
+    const buurtRatio = input.vraagprijs / kad.gemKoopsomBuurt;
+    if (buurtRatio > 1.25)      factoren.push({ label: 'Hoog t.o.v. buurtgemiddelde', punten: 15, toelichting: `${((buurtRatio - 1) * 100).toFixed(0)}% boven gem. koopsom buurt` });
+    else if (buurtRatio > 1.10) factoren.push({ label: 'Boven buurtgemiddelde', punten: 8, toelichting: `${((buurtRatio - 1) * 100).toFixed(0)}% boven gem. koopsom buurt` });
+  }
+
+  const score = Math.min(100, factoren.reduce((s, f) => s + f.punten, 0));
+  const niveau: 'laag' | 'middel' | 'hoog' = score <= 20 ? 'laag' : score <= 45 ? 'middel' : 'hoog';
+  return { score, niveau, factoren };
+}
+
 // ── Samenvatting tab ───────────────────────────────────────────────────────────
 function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterInfo }) {
+  const risico = berekenRisico(input, kad);
+
   const warnings: { msg: string; level: 'danger' | 'warn' | 'info' }[] = [];
   if (kad.isRijksmonument)
     warnings.push({ msg: 'Rijksmonument — verbouwing vereist vergunning Rijksdienst voor het Cultureel Erfgoed.', level: 'danger' });
@@ -203,8 +251,51 @@ function SamenvattingTab({ input, kad }: { input: PropertyInput; kad: KadasterIn
   if ((kad.vboCount ?? 0) > 1)
     warnings.push({ msg: `Pand al gesplitst (${kad.vboCount} eenheden) — check VvE en splitsingsakte.`, level: 'info' });
 
+  const risicoStyle = {
+    laag:   { bar: 'bg-positive', text: 'text-positive', border: 'border-positive/30 bg-positive/5', label: 'Laag risico' },
+    middel: { bar: 'bg-warning',  text: 'text-warning',  border: 'border-warning/30 bg-warning/5',   label: 'Middel risico' },
+    hoog:   { bar: 'bg-destructive', text: 'text-destructive', border: 'border-destructive/30 bg-destructive/5', label: 'Hoog risico' },
+  }[risico.niveau];
+
   return (
     <div className="space-y-4">
+
+      {/* Risicoscore */}
+      <div className={`panel p-5 border-2 ${risicoStyle.border}`}>
+        <div className="flex items-center justify-between gap-4 mb-3 flex-wrap">
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-0.5">Risicoscore</div>
+            <div className={`text-2xl font-extrabold ${risicoStyle.text}`}>{risicoStyle.label}</div>
+          </div>
+          <div className="text-right">
+            <div className={`text-4xl font-black tabular ${risicoStyle.text}`}>{risico.score}</div>
+            <div className="text-[11px] text-muted-foreground">/ 100</div>
+          </div>
+        </div>
+        <div className="w-full bg-muted rounded-full h-2 mb-4">
+          <div
+            className={`h-2 rounded-full transition-all ${risicoStyle.bar}`}
+            style={{ width: `${risico.score}%` }}
+          />
+        </div>
+        {risico.factoren.length > 0 ? (
+          <div className="space-y-1.5">
+            {risico.factoren.map((f, i) => (
+              <div key={i} className="flex items-center justify-between text-xs gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-warning font-bold shrink-0">▲</span>
+                  <span className="font-medium truncate">{f.label}</span>
+                  <span className="text-muted-foreground truncate">{f.toelichting}</span>
+                </div>
+                <span className={`shrink-0 font-bold ${risicoStyle.text}`}>+{f.punten}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Geen significante risicofactoren gedetecteerd.</p>
+        )}
+      </div>
+
       {warnings.length > 0 && (
         <div className="space-y-2">
           {warnings.map((w, i) => (
@@ -469,6 +560,7 @@ export default function CalculatorDashboard() {
             {activeTab === 8 && <VerbouwTab      input={result.input} />}
             {activeTab === 9 && <AanhoudenTab    input={result.input} kad={result.kad} />}
             {activeTab === 10 && <HypotheekTab   input={result.input} />}
+            {activeTab === 11 && <MarktTab       input={result.input} kad={result.kad} />}
           </div>
         </>
       )}

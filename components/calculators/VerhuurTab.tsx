@@ -38,7 +38,7 @@ interface VerhuurTabProps {
   kad: KadasterInfo;
 }
 
-export default function VerhuurTab({ input }: VerhuurTabProps) {
+export default function VerhuurTab({ input, kad }: VerhuurTabProps) {
   // WWS controls
   const [buitenruimte, setBuitenruimte] = useState(0);
   const [aanrechtGroot, setAanrechtGroot] = useState(false);
@@ -370,6 +370,62 @@ export default function VerhuurTab({ input }: VerhuurTabProps) {
         </div>
         <p className="text-[11px] text-muted-foreground mt-3">Indicatief — geen officieel WWS-instrument. Puntentelling per 2024/2025.</p>
       </div>
+
+      {/* CBS Buurtcontext */}
+      {(kad.cbsPctHuur != null || kad.cbsGemInkomen || kad.cbsGemWoningWaarde) && (
+        <div className="panel p-5">
+          <div className={SECTION_HDR}>Buurtcontext — CBS data</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {kad.cbsPctHuur != null && (
+              <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">% Huurwoningen</div>
+                <div className={`text-xl font-extrabold tabular ${kad.cbsPctHuur >= 40 ? 'text-positive' : kad.cbsPctHuur >= 20 ? 'text-warning' : 'text-navy'}`}>
+                  {kad.cbsPctHuur}%
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  {kad.cbsPctHuur >= 40 ? 'Sterk verhuurmarkt' : kad.cbsPctHuur >= 20 ? 'Gemengde markt' : 'Weinig huurders'}
+                </div>
+              </div>
+            )}
+            {kad.cbsPctKoop != null && (
+              <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">% Koopwoningen</div>
+                <div className="text-xl font-extrabold tabular text-navy">{kad.cbsPctKoop}%</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">Buurtsamenstelling</div>
+              </div>
+            )}
+            {kad.cbsGemInkomen && (
+              <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">Gem. inkomen buurt</div>
+                <div className="text-xl font-extrabold tabular text-navy">€{kad.cbsGemInkomen.toLocaleString('nl-NL')}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">Per jaar per inwoner</div>
+              </div>
+            )}
+            {kad.cbsGemWoningWaarde && (
+              <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">Gem. woningwaarde</div>
+                <div className="text-xl font-extrabold tabular text-navy">€{(kad.cbsGemWoningWaarde / 1000).toFixed(0)}k</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">CBS buurtstatistiek</div>
+              </div>
+            )}
+            {kad.gemKoopsomBuurt && (
+              <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">Gem. koopsom buurt</div>
+                <div className="text-xl font-extrabold tabular text-navy">€{(kad.gemKoopsomBuurt / 1000).toFixed(0)}k</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  {kad.koopsomAantal ? `${kad.koopsomAantal} transacties (Kadaster)` : 'Kadaster data'}
+                </div>
+              </div>
+            )}
+          </div>
+          {kad.cbsPctHuur != null && (
+            <p className="text-[11px] text-muted-foreground/60 mt-3">
+              Een hogere huurquote in de buurt duidt op een actieve verhuurmarkt en potentieel hogere huurvraag.
+              Bron: CBS Wijken &amp; Buurten.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

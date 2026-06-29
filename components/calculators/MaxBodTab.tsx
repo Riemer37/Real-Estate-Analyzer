@@ -32,7 +32,7 @@ interface MaxBodTabProps {
   kad: KadasterInfo;
 }
 
-export default function MaxBodTab({ input }: MaxBodTabProps) {
+export default function MaxBodTab({ input, kad }: MaxBodTabProps) {
   const [gewensteRoi, setGewensteRoi] = useState(15);
 
   // All purchase costs read from central PropertyInput
@@ -61,6 +61,15 @@ export default function MaxBodTab({ input }: MaxBodTabProps) {
   }, [gewensteRoi, verkoopwaarde, totaleInv, verbouwing, bijkomend, input.woonoppervlakte, input.vraagprijs]);
 
   const hasVerkoop = verkoopwaarde > 0;
+
+  // Buurtprijs suggestie wanneer geen referentieprijs is ingevuld
+  const buurtSuggestiePerM2 = input.referentieprijsPerM2 == null && input.woonoppervlakte > 0
+    ? (kad.gemKoopsomBuurt
+        ? Math.round(kad.gemKoopsomBuurt / input.woonoppervlakte)
+        : kad.cbsGemWoningWaarde
+          ? Math.round(kad.cbsGemWoningWaarde / input.woonoppervlakte)
+          : null)
+    : null;
 
   return (
     <div className="space-y-4">
@@ -189,9 +198,27 @@ export default function MaxBodTab({ input }: MaxBodTabProps) {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground italic">
-                Vul een referentieprijs in via het invoerformulier (sectie &quot;Verkoopwaarde na verbouwing&quot;).
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground italic">
+                  Vul een referentieprijs in via het invoerformulier (sectie &quot;Verkoopwaarde na verbouwing&quot;).
+                </p>
+                {buurtSuggestiePerM2 && (
+                  <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs">
+                    <div className="font-semibold text-primary mb-1">Suggestie op basis van buurtdata</div>
+                    <div className="text-muted-foreground">
+                      {kad.gemKoopsomBuurt
+                        ? `Kadaster gem. koopsom buurt: €${kad.gemKoopsomBuurt.toLocaleString('nl-NL')} → `
+                        : `CBS gem. woningwaarde buurt: €${kad.cbsGemWoningWaarde?.toLocaleString('nl-NL')} → `}
+                      <span className="font-bold text-foreground">≈ €{buurtSuggestiePerM2.toLocaleString('nl-NL')}/m²</span>
+                      {` × ${input.woonoppervlakte}m² = `}
+                      <span className="font-bold text-navy">{fmtEUR(buurtSuggestiePerM2 * input.woonoppervlakte)}</span>
+                    </div>
+                    <div className="text-muted-foreground/70 mt-1">
+                      Gebruik dit als startpunt — pas aan op basis van staat en specifieke ligging.
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
