@@ -29,6 +29,7 @@ interface Top3Item {
 
 interface AIResult {
   samenvatting: string;
+  databronnen?: string[];
   strategieen: Strategy[];
   top3: Top3Item[];
   aandachtspunten: string[];
@@ -191,6 +192,14 @@ export default function AIAnalyseTab({ input, kad }: AIAnalyseTabProps) {
             <div className="panel p-5">
               <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">Samenvatting</div>
               <p className="text-sm leading-relaxed text-foreground/90">{result.samenvatting}</p>
+              {result.databronnen && result.databronnen.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border flex flex-wrap gap-1.5">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide mr-1">Databronnen:</span>
+                  {result.databronnen.map((b, i) => (
+                    <span key={i} className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border">{b}</span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

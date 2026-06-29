@@ -4,6 +4,95 @@ import { useState, useMemo } from 'react';
 import type { PropertyInput, KadasterInfo } from '@/lib/calc-types';
 import { fmtEUR } from '@/lib/calculations';
 
+// ── SVG Waardecurve ────────────────────────────────────────────────────────────
+function WaardeCurve({
+  aankoopprijs,
+  groei,
+  looptijd,
+  verhuur,
+  nettoCashflowJr,
+  totaalInvestering,
+}: {
+  aankoopprijs: number;
+  groei: number;
+  looptijd: number;
+  verhuur: boolean;
+  nettoCashflowJr: number;
+  totaalInvestering: number;
+}) {
+  const W = 600; const H = 200; const PAD = 48;
+  const jaren = Math.min(looptijd, 30);
+
+  const punten = Array.from({ length: jaren + 1 }, (_, i) => {
+    const waarde = aankoopprijs * Math.pow(1 + groei / 100, i);
+    const cashflow = verhuur ? nettoCashflowJr * i : 0;
+    return { jaar: i, waarde, netto: waarde + cashflow - totaalInvestering };
+  });
+
+  const maxWaarde = Math.max(...punten.map(p => p.waarde));
+  const minNetto  = Math.min(...punten.map(p => p.netto), 0);
+  const maxNetto  = Math.max(...punten.map(p => p.netto));
+  const maxY = Math.max(maxWaarde, totaalInvestering) * 1.05;
+  const minY = Math.min(minNetto, 0);
+  const range = maxY - minY;
+
+  const toX = (jaar: number) => PAD + ((W - PAD * 2) * jaar) / jaren;
+  const toY = (val: number)  => H - PAD - ((val - minY) / range) * (H - PAD * 1.5);
+
+  const waardePath = punten.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.jaar).toFixed(1)},${toY(p.waarde).toFixed(1)}`).join(' ');
+  const nettoPad   = punten.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.jaar).toFixed(1)},${toY(p.netto).toFixed(1)}`).join(' ');
+  const nulY = toY(0);
+  const invY = toY(totaalInvestering);
+
+  const tickJaren = jaren <= 10 ? punten.map(p => p.jaar) : [0, 5, 10, 15, 20, 25, 30].filter(j => j <= jaren);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-40 sm:h-52">
+      {/* Grid */}
+      {[0, 0.25, 0.5, 0.75, 1].map(t => {
+        const y = PAD + t * (H - PAD * 1.5);
+        const val = maxY - t * range;
+        return (
+          <g key={t}>
+            <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="currentColor" strokeOpacity={0.08} strokeWidth={1} />
+            <text x={PAD - 4} y={y + 4} textAnchor="end" fontSize={9} fill="currentColor" opacity={0.4}>
+              {val >= 1_000_000 ? (val / 1_000_000).toFixed(1) + 'M' : val >= 1000 ? Math.round(val / 1000) + 'k' : Math.round(val)}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Nul-lijn */}
+      {minY < 0 && <line x1={PAD} y1={nulY} x2={W - PAD} y2={nulY} stroke="#94a3b8" strokeDasharray="4 3" strokeWidth={1} />}
+
+      {/* Investering lijn */}
+      <line x1={PAD} y1={invY} x2={W - PAD} y2={invY} stroke="#6366f1" strokeDasharray="3 3" strokeWidth={1} opacity={0.5} />
+      <text x={W - PAD + 2} y={invY + 3} fontSize={8} fill="#6366f1" opacity={0.7}>Inv.</text>
+
+      {/* Waarde lijn */}
+      <path d={waardePath} fill="none" stroke="#1e3a5f" strokeWidth={2} strokeLinejoin="round" />
+
+      {/* Netto opbrengst lijn */}
+      <path d={nettoPad} fill="none" stroke="#22c55e" strokeWidth={1.5} strokeDasharray="5 2" strokeLinejoin="round" />
+
+      {/* X-as labels */}
+      {tickJaren.map(j => (
+        <text key={j} x={toX(j)} y={H - 6} textAnchor="middle" fontSize={9} fill="currentColor" opacity={0.5}>
+          {j}j
+        </text>
+      ))}
+
+      {/* Legenda */}
+      <g>
+        <line x1={PAD} y1={H - 36} x2={PAD + 16} y2={H - 36} stroke="#1e3a5f" strokeWidth={2} />
+        <text x={PAD + 20} y={H - 32} fontSize={9} fill="currentColor" opacity={0.6}>Waarde</text>
+        <line x1={PAD + 70} y1={H - 36} x2={PAD + 86} y2={H - 36} stroke="#22c55e" strokeWidth={1.5} strokeDasharray="5 2" />
+        <text x={PAD + 90} y={H - 32} fontSize={9} fill="currentColor" opacity={0.6}>Netto opbrengst</text>
+      </g>
+    </svg>
+  );
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function cagr(history: { jaar: number; waarde: number }[]): number | null {
@@ -210,6 +299,21 @@ export default function AanhoudenTab({ input, kad }: { input: PropertyInput; kad
             <div className="font-semibold tabular">{fmt(hoofdScenario.nettoVerkoopw)}</div>
           </div>
         </div>
+      </div>
+
+      {/* ── Waardecurve ── */}
+      <div className="panel p-5">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-3">
+          Waardeontwikkeling over {Math.min(looptijd, 30)} jaar
+        </div>
+        <WaardeCurve
+          aankoopprijs={aankoopprijs}
+          groei={groei}
+          looptijd={looptijd}
+          verhuur={verhuur}
+          nettoCashflowJr={hoofdScenario.nettoCashflowJr}
+          totaalInvestering={totaalInvestering}
+        />
       </div>
 
       {/* ── Vergelijkingstabel ── */}

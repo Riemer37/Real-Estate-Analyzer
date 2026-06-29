@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Trash2, Clock, Sparkles } from 'lucide-react';
+import { AlertTriangle, Trash2, Clock, Sparkles, Printer } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import type { PropertyInput, KadasterInfo, EnergyLabel } from '@/lib/calc-types';
 import { fmtEUR } from '@/lib/calculations';
@@ -17,6 +17,7 @@ import HwmTab from '@/components/calculators/HwmTab';
 import MultiUnitTab from '@/components/calculators/MultiUnitTab';
 import VerbouwTab from '@/components/calculators/VerbouwTab';
 import AanhoudenTab from '@/components/calculators/AanhoudenTab';
+import HypotheekTab from '@/components/calculators/HypotheekTab';
 
 const FREE_SAVE_LIMIT = 5;
 
@@ -31,6 +32,7 @@ const BASE_TABS = [
   { id: 7, label: 'AI Analyse' },
   { id: 8, label: 'Verbouw' },
   { id: 9, label: 'Aanhouden' },
+  { id: 10, label: 'Hypotheek' },
 ];
 
 function energielabelColor(label: EnergyLabel): string {
@@ -166,13 +168,23 @@ function SummaryBar({ input, kad, onReset }: { input: PropertyInput; kad: Kadast
           <Pill className={energielabelColor(input.energielabel)}>{input.energielabel}</Pill>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onReset}
-        className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground"
-      >
-        Nieuwe analyse
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="px-3 py-1.5 text-xs font-semibold rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground flex items-center gap-1.5 print:hidden"
+        >
+          <Printer className="size-3" />
+          PDF
+        </button>
+        <button
+          type="button"
+          onClick={onReset}
+          className="px-3 py-1.5 text-xs font-semibold rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground print:hidden"
+        >
+          Nieuwe analyse
+        </button>
+      </div>
     </div>
   );
 }
@@ -426,8 +438,8 @@ export default function CalculatorDashboard() {
           <SummaryBar input={result.input} kad={result.kad} onReset={handleReset} />
 
           {(() => { const TABS = result.input.isMultiUnit ? BASE_TABS : BASE_TABS.filter(t => t.id !== 4); return null; })()}
-          <div className="px-6 border-b border-border bg-card">
-            <div className="flex gap-1 overflow-x-auto">
+          <div className="border-b border-border bg-card">
+            <div className="flex gap-1 overflow-x-auto scrollbar-none px-4 sm:px-6">
               {(result.input.isMultiUnit ? BASE_TABS : BASE_TABS.filter(t => t.id !== 4)).map(t => (
                 <button
                   key={t.id}
@@ -445,7 +457,7 @@ export default function CalculatorDashboard() {
             </div>
           </div>
 
-          <div className="p-6 bg-background">
+          <div className="p-4 sm:p-6 bg-background">
             {activeTab === 0 && <SamenvattingTab input={result.input} kad={result.kad} />}
             {activeTab === 1 && <MaxBodTab       input={result.input} kad={result.kad} />}
             {activeTab === 2 && <VerhuurTab      input={result.input} kad={result.kad} />}
@@ -456,6 +468,7 @@ export default function CalculatorDashboard() {
             {activeTab === 7 && <AIAnalyseTab    input={result.input} kad={result.kad} />}
             {activeTab === 8 && <VerbouwTab      input={result.input} />}
             {activeTab === 9 && <AanhoudenTab    input={result.input} kad={result.kad} />}
+            {activeTab === 10 && <HypotheekTab   input={result.input} />}
           </div>
         </>
       )}
