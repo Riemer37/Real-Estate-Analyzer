@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, DragEvent, ChangeEvent } from 'react';
 import { Upload, Loader2, ChevronRight, ChevronLeft, AlertTriangle, CheckCircle, Sparkles } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
@@ -526,6 +526,23 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
     if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   }, []);
 
+  // Clipboard paste (Ctrl+V / Cmd+V) — alleen op stap 1
+  useEffect(() => {
+    if (step !== 1) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const f = item.getAsFile();
+          if (f) { handleFile(f); break; }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) handleFile(e.target.files[0]);
   };
@@ -643,7 +660,7 @@ export default function VerbouwTab({ input }: { input: PropertyInput }) {
             ) : (
               <div className="space-y-2">
                 <Upload className="size-10 text-muted-foreground/40 mx-auto" />
-                <p className="text-sm font-medium text-muted-foreground">Sleep hier of klik om te uploaden</p>
+                <p className="text-sm font-medium text-muted-foreground">Sleep hier, klik om te uploaden of plak met Ctrl+V</p>
                 <p className="text-xs text-muted-foreground/60">JPG, PNG, WebP of PDF · max 20 MB</p>
               </div>
             )}
