@@ -177,14 +177,22 @@ export async function POST(request) {
       }
     }
 
-    // Koopsommen verwerken (zonder BAG VBO spatial lookups)
+    // Koopsommen verwerken — met afstandsberekening t.o.v. het pand
     if (koopData?.features?.length > 0) {
-      res.koopsommen = koopData.features.map(f => ({
-        prijs:  f.properties?.koopsom ?? null,
-        datum:  f.properties?.transactiedatum ?? null,
-        opp:    f.properties?.perceeloppervlakte ?? null,
-        coords: f.geometry?.coordinates ?? null,
-      })).filter(k => k.prijs);
+      res.koopsommen = koopData.features.map(f => {
+        const coords = f.geometry?.coordinates;
+        let afstand = null;
+        if (coords && res.lat && res.lon) {
+          const dlat = (coords[1] - res.lat) * 111000;
+          const dlon = (coords[0] - res.lon) * Math.cos(res.lat * Math.PI / 180) * 111000;
+          afstand = Math.round(Math.sqrt(dlat * dlat + dlon * dlon));
+        }
+        return {
+          prijs:  f.properties?.koopsom ?? null,
+          datum:  f.properties?.transactiedatum ?? null,
+          afstand,
+        };
+      }).filter(k => k.prijs);
       if (res.koopsommen.length > 0) {
         res.laatste_koopsom       = res.koopsommen[0].prijs;
         res.laatste_koopsom_datum = res.koopsommen[0].datum;

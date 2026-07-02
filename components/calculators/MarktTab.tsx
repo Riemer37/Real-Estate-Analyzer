@@ -6,19 +6,42 @@ import { fmtEUR } from '@/lib/calculations';
 function fmt(n: number) { return fmtEUR(n); }
 function fmtPct(n: number) { return n.toFixed(1) + '%'; }
 
+type BronType = 'officieel' | 'berekend' | 'invoer';
+const BRON_CLS: Record<BronType, string> = {
+  officieel: 'bg-positive/10 text-positive border-positive/25',
+  berekend:  'bg-warning/10 text-warning border-warning/25',
+  invoer:    'bg-muted text-muted-foreground border-border',
+};
+function BronBadge({ type, label }: { type: BronType; label: string }) {
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wide ${BRON_CLS[type]}`}>
+      {label}
+    </span>
+  );
+}
+
 function StatCard({
-  label, value, sub, color, bron,
+  label, value, sub, color, bron, bronType,
 }: {
-  label: string; value: string; sub?: string; color?: string; bron?: string;
+  label: string; value: string; sub?: string; color?: string; bron?: string; bronType?: BronType;
 }) {
   return (
     <div className="panel p-4">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">{label}</div>
+      <div className="flex items-center justify-between gap-1 mb-1">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{label}</div>
+        {bron && bronType && <BronBadge type={bronType} label={bron} />}
+      </div>
       <div className={`text-xl font-extrabold tabular ${color ?? 'text-navy'}`}>{value}</div>
       {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
-      {bron && <div className="text-[10px] text-muted-foreground/50 mt-1">bron: {bron}</div>}
     </div>
   );
+}
+
+function fmtDatum(d: string): string {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return d;
+  return dt.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function DataRow({ k, v, highlight }: { k: string; v: string; highlight?: boolean }) {
@@ -66,10 +89,12 @@ function WozChart({ history }: { history: { jaar: number; waarde: number }[] }) 
 }
 
 export default function MarktTab({ input, kad }: { input: PropertyInput; kad: KadasterInfo }) {
-  const heeftCBS     = kad.cbsGemWoningWaarde != null;
-  const heeftKoopsom = kad.gemKoopsomBuurt != null;
-  const heeftWoz     = kad.wozHistory.length > 0;
-  const heeftRP      = !!kad.rpNaam;
+  const heeftCBS          = kad.cbsGemWoningWaarde != null;
+  const heeftKoopsom      = kad.gemKoopsomBuurt != null;
+  const heeftWoz          = kad.wozHistory.length > 0;
+  const heeftRP           = !!kad.rpNaam;
+  const heeftTransacties  = (kad.koopsommen?.length ?? 0) > 0;
+  const transacties       = [...(kad.koopsommen ?? [])].sort((a, b) => b.datum.localeCompare(a.datum));
 
   // Prijs per m2 vergelijkingen
   const vraagprijsPerM2 = input.woonoppervlakte > 0 ? input.vraagprijs / input.woonoppervlakte : 0;
@@ -117,6 +142,7 @@ export default function MarktTab({ input, kad }: { input: PropertyInput; kad: Ka
             value={vraagprijsPerM2 > 0 ? `€ ${Math.round(vraagprijsPerM2).toLocaleString('nl-NL')}` : '—'}
             sub={`${input.woonoppervlakte} m²`}
             bron="Invoer"
+            bronType="invoer"
           />
           {wozPerM2 && (
             <StatCard
@@ -124,6 +150,7 @@ export default function MarktTab({ input, kad }: { input: PropertyInput; kad: Ka
               value={`€ ${Math.round(wozPerM2).toLocaleString('nl-NL')}`}
               sub={kad.officielSqm ? `${kad.officielSqm} m² officieel` : undefined}
               bron="BAG/WOZ"
+              bronType="officieel"
             />
           )}
           {cbsPerM2 && (
@@ -131,6 +158,7 @@ export default function MarktTab({ input, kad }: { input: PropertyInput; kad: Ka
               label="Gem. woningwaarde buurt"
               value={fmt(cbsPerM2)}
               bron="CBS"
+              bronType="officieel"
               color={input.vraagprijs > cbsPerM2 ? 'text-warning' : 'text-positive'}
             />
           )}
@@ -140,6 +168,7 @@ export default function MarktTab({ input, kad }: { input: PropertyInput; kad: Ka
               value={fmt(koopsomPerM2)}
               sub={kad.koopsomAantal ? `${kad.koopsomAantal} transacties` : undefined}
               bron="Kadaster"
+              bronType="officieel"
               color={input.vraagprijs > koopsomPerM2 ? 'text-warning' : 'text-positive'}
             />
           )}
@@ -316,6 +345,87 @@ export default function MarktTab({ input, kad }: { input: PropertyInput; kad: Ka
         </div>
       </div>
 
+      {/* ── Recente transacties ── */}
+      {heeftTransacties && (
+        <div className="panel p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+              Recente transacties in de buurt
+            </div>
+            <BronBadge type="officieel" label="Kadaster" />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-1.5 pr-4 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Datum</th>
+                  <th className="text-right py-1.5 pr-4 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Koopsom</th>
+                  <th className="text-right py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Afstand</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {transacties.map((t, i) => (
+                  <tr key={i} className="hover:bg-muted/30 transition-colors">
+                    <td className="py-2 pr-4 text-muted-foreground">{fmtDatum(t.datum)}</td>
+                    <td className="py-2 pr-4 text-right font-semibold tabular">{fmt(t.prijs)}</td>
+                    <td className="py-2 text-right text-muted-foreground tabular">
+                      {t.afstand !== null ? `~${t.afstand}m` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[10px] text-muted-foreground/60 mt-3">
+            Werkelijk betaalde koopsommen (officieel Kadaster-register, max 3 jaar terug, binnen ~300m). Geen adressen of woonoppervlakte beschikbaar.
+          </p>
+        </div>
+      )}
+
+      {/* ── Pand- & locatieinfo ── */}
+      {(kad.bouwjaar || kad.officielSqm) && (
+        <div className="panel p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Pandgegevens</div>
+            <BronBadge type="officieel" label="BAG" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+            {kad.bouwjaar && (
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Bouwjaar</div>
+                <div className="font-semibold">{kad.bouwjaar}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">
+                  {new Date().getFullYear() - kad.bouwjaar} jaar oud
+                </div>
+              </div>
+            )}
+            {kad.officielSqm && (
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Officieel opp. (BAG)</div>
+                <div className="font-semibold">{kad.officielSqm} m²</div>
+                {kad.officielSqm !== input.woonoppervlakte && (
+                  <div className="text-[10px] text-warning mt-0.5">
+                    Invoer: {input.woonoppervlakte} m²
+                  </div>
+                )}
+              </div>
+            )}
+            {kad.perceelOppervlakte && (
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Perceeloppervlak</div>
+                <div className="font-semibold">{kad.perceelOppervlakte} m²</div>
+              </div>
+            )}
+            {kad.gebruiksdoel && (
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Gebruiksdoel (BAG)</div>
+                <div className="font-semibold">{kad.gebruiksdoel}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Data beschikbaarheid ── */}
       <div className="panel p-4">
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">Beschikbare databronnen</div>
@@ -325,8 +435,10 @@ export default function MarktTab({ input, kad }: { input: PropertyInput; kad: Ka
             { label: 'WOZ-historie', ok: heeftWoz },
             { label: 'CBS buurt', ok: heeftCBS },
             { label: 'Kadaster koopsommen', ok: heeftKoopsom },
+            { label: `Recente transacties (${kad.koopsomAantal ?? 0})`, ok: heeftTransacties },
             { label: 'RuimtelijkePlannen', ok: heeftRP },
             { label: 'EP-Online energielabel', ok: !!kad.energielabelEP },
+            { label: 'Bouwjaar (BAG)', ok: !!kad.bouwjaar },
           ].map(({ label, ok }) => (
             <span key={label} className={`text-[10px] px-2 py-0.5 rounded border font-semibold ${
               ok ? 'bg-positive/10 border-positive/30 text-positive' : 'bg-muted border-border text-muted-foreground/50'

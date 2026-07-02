@@ -77,9 +77,11 @@ export interface KadasterInfo {
   cbsPctHuur?: number;
   cbsGemInkomen?: number;
   cbsLeegstand?: number;
-  // Koopsommen buurt
+  // Kadaster transacties
+  bouwjaar?: number;
   gemKoopsomBuurt?: number;
   koopsomAantal?: number;
+  koopsommen?: { prijs: number; datum: string; afstand: number | null }[];
   // RuimtelijkePlannen
   rpNaam?: string;
   rpPlanDatum?: string;

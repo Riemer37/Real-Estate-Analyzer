@@ -309,8 +309,40 @@ function CockpitTab({
   const risicoBarCls = { laag: 'bg-positive', middel: 'bg-warning', hoog: 'bg-destructive' }[risico.niveau];
   const risicoTextCls = { laag: 'text-positive', middel: 'text-warning', hoog: 'text-destructive' }[risico.niveau];
 
+  // Cross-validatie: invoer vs officiële bronnen
+  const sqmAfwijking = kad.officielSqm && input.woonoppervlakte > 0
+    ? Math.abs(input.woonoppervlakte - kad.officielSqm) / kad.officielSqm * 100
+    : null;
+  const labelAfwijking = kad.energielabelEP && kad.energielabelEP !== input.energielabel;
+
   return (
     <div className="space-y-4">
+
+      {/* Cross-validatie waarschuwingen */}
+      {(sqmAfwijking !== null && sqmAfwijking > 10) || labelAfwijking ? (
+        <div className="space-y-2">
+          {sqmAfwijking !== null && sqmAfwijking > 10 && (
+            <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+              <span>
+                <strong>Oppervlakte verschil:</strong> jij hebt {input.woonoppervlakte} m² ingevoerd,
+                maar BAG registreert officieel <strong>{kad.officielSqm} m²</strong> ({sqmAfwijking.toFixed(0)}% verschil).
+                Controleer dit — foute m² beïnvloeden alle berekeningen.
+              </span>
+            </div>
+          )}
+          {labelAfwijking && (
+            <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+              <span>
+                <strong>Energielabel verschil:</strong> jij hebt label <strong>{input.energielabel}</strong> ingevoerd,
+                maar EP-Online registreert <strong>{kad.energielabelEP}</strong>.
+                {' '}Gebruik het officiële label voor accurate WWS- en renovatieberekeningen.
+              </span>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* Verdict banner */}
       <div className={`rounded-xl border-2 p-5 ${verdictCls}`}>
@@ -322,7 +354,10 @@ function CockpitTab({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Risicoscore */}
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">Risicoscore</div>
+          <div className="flex items-center justify-between gap-1 mb-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Risicoscore</div>
+            <span className="text-[9px] px-1.5 py-0.5 rounded border font-bold uppercase bg-warning/10 text-warning border-warning/25">Berekend</span>
+          </div>
           <div className={`text-3xl font-black tabular ${risicoTextCls}`}>{risico.score}</div>
           <div className="w-full bg-muted rounded-full h-1.5 mt-2 mb-1">
             <div className={`h-1.5 rounded-full ${risicoBarCls}`} style={{ width: `${risico.score}%` }} />
@@ -332,7 +367,10 @@ function CockpitTab({
 
         {/* Prijs per m² */}
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">Prijs per m²</div>
+          <div className="flex items-center justify-between gap-1 mb-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Prijs per m²</div>
+            <span className="text-[9px] px-1.5 py-0.5 rounded border font-bold uppercase bg-muted text-muted-foreground border-border">Invoer</span>
+          </div>
           <div className="text-3xl font-black tabular text-navy">€{prijsM2.toLocaleString('nl-NL')}</div>
           {wozRatio !== null && (
             <div className={`text-xs font-semibold mt-2 ${Math.abs(wozRatio) <= 10 ? 'text-positive' : wozRatio > 0 ? 'text-warning' : 'text-positive'}`}>
@@ -340,7 +378,7 @@ function CockpitTab({
             </div>
           )}
           {buurtRatio !== null && (
-            <div className={`text-xs text-muted-foreground mt-0.5`}>
+            <div className="text-xs text-muted-foreground mt-0.5">
               {buurtRatio > 0 ? '+' : ''}{buurtRatio.toFixed(0)}% vs buurt
             </div>
           )}
@@ -348,7 +386,10 @@ function CockpitTab({
 
         {/* WWS max huur */}
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">WWS max huur</div>
+          <div className="flex items-center justify-between gap-1 mb-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">WWS max huur</div>
+            <span className="text-[9px] px-1.5 py-0.5 rounded border font-bold uppercase bg-warning/10 text-warning border-warning/25">Berekend</span>
+          </div>
           <div className={`text-3xl font-black tabular ${wwsColor}`}>€{wwsHuur.toLocaleString('nl-NL')}</div>
           <div className="text-xs text-muted-foreground mt-2">per maand</div>
           <div className={`text-xs font-bold mt-0.5 ${wwsColor}`}>{wwsCategorie}</div>
@@ -356,7 +397,12 @@ function CockpitTab({
 
         {/* Buurtdata */}
         <div className="panel p-4">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">Buurtgemiddelde</div>
+          <div className="flex items-center justify-between gap-1 mb-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Buurtgemiddelde</div>
+            <span className="text-[9px] px-1.5 py-0.5 rounded border font-bold uppercase bg-positive/10 text-positive border-positive/25">
+              {kad.gemKoopsomBuurt ? 'Kadaster' : 'CBS'}
+            </span>
+          </div>
           {kad.gemKoopsomBuurt ? (
             <>
               <div className="text-3xl font-black tabular text-navy">€{(kad.gemKoopsomBuurt / 1000).toFixed(0)}k</div>
@@ -424,6 +470,13 @@ function CockpitTab({
         </div>
       </div>
 
+      {/* Disclaimer */}
+      <div className="rounded-md border border-border bg-muted/30 px-4 py-3 text-[11px] text-muted-foreground leading-relaxed">
+        <strong>Let op:</strong> Dit is een analyse-tool op basis van openbare data (Kadaster, CBS, BAG, EP-Online).
+        Alle berekeningen zijn indicatief. De app vervangt geen officieel taxatierapport, bouwkundige keuring of financieel advies.
+        Betrouwbaarheid van AI-gegenereerde analyses hangt af van de ingevoerde gegevens.
+      </div>
+
       {/* Kadaster details — inklapbaar */}
       <div className="panel overflow-hidden">
         <button
@@ -439,6 +492,7 @@ function CockpitTab({
 
         {kadOpen && (
           <div className="px-5 pb-5 border-t border-border">
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
               {/* Invoergegevens */}
               <div>

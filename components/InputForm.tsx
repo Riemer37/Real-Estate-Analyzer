@@ -109,8 +109,19 @@ export default function InputForm({ onCalculate, initialInput, initialKad }: Inp
         cbsPctHuur: data.cbs_pct_huur ?? undefined,
         cbsGemInkomen: data.cbs_gem_inkomen ?? undefined,
         cbsLeegstand: data.cbs_leegstand ?? undefined,
+        bouwjaar: data.official_year ?? undefined,
         gemKoopsomBuurt: data.gem_koopsom_buurt ?? undefined,
         koopsomAantal: data.koopsommen?.length ?? undefined,
+        koopsommen: data.koopsommen
+          ? data.koopsommen
+              .filter((k: { prijs: number | null }) => k.prijs)
+              .slice(0, 12)
+              .map((k: { prijs: number; datum: string; afstand: number | null }) => ({
+                prijs: k.prijs,
+                datum: k.datum,
+                afstand: k.afstand ?? null,
+              }))
+          : undefined,
         rpNaam: data.rp_naam ?? undefined,
         rpPlanDatum: data.rp_plan_datum ?? undefined,
         rpBestemming: data.rp_bestemming ?? undefined,
